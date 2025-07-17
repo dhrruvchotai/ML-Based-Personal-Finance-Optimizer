@@ -1,9 +1,9 @@
 import 'package:get/get.dart';
 import '../models/transaction_model.dart';
-import '../services/transaction_routs.dart';
+import '../services/transaction_service.dart';
 
 class TransactionController extends GetxController{
-  final TransactionRouts _service = TransactionRouts();
+  final TransactionService _service = TransactionService();
 
   var transactions = <TransactionModel>[].obs;
   var isLoading = false.obs;
