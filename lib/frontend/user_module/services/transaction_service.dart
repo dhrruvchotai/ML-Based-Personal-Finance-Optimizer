@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/transaction_model.dart';
 
-class TransactionRouts{
+class TransactionService{
   static const String baseUrl = '';
 
   //fetch transaction from userId
