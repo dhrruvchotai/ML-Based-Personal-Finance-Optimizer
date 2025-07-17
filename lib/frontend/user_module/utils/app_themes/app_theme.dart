@@ -1,36 +1,57 @@
+// import 'package:flutter/material.dart';
+//
+// ThemeData lightMode = ThemeData(
+//   brightness: Brightness.light,
+//   colorScheme: ColorScheme.light(
+//     background: const Color(0xFFF4F1FF),
+//     surface: const Color(0xFFFFFFFF),
+//     primary: const Color(0xFF8B5FBF),
+//     secondary: const Color(0xFFE879F9),
+//     onBackground: const Color(0xFF2D1B69),
+//     onSurface: const Color(0xFFA5A3C7),
+//     outline: const Color(0xFF3B4070)
+//
+//
+//   )
+// );
+//
+// ThemeData darkMode = ThemeData(
+//     brightness: Brightness.dark,
+//   colorScheme: ColorScheme.dark(
+//     background: const Color(0xFF0A0B1E),
+//     surface: const Color(0xFF1A1B3A),
+//     primary: const Color(0xFF8B5FBF),
+//     secondary: const Color(0xFFE879F9),
+//     onBackground:const  Color(0xFFE8E6FF),
+//     onSurface:const Color(0xFF6B6394),
+//     outline: const Color(0xFFE1DCFF),
+//   )
+// );
+
 import 'package:flutter/material.dart';
 
 // Light theme with pastel colors
 ThemeData lightMode = ThemeData(
   brightness: Brightness.light,
   colorScheme: const ColorScheme.light(
-    // Main background - Pastel off-white for a clean, warm look
-    background: Color(0xFFF5F6F5),
-    // Surface - Pure white for cards and inputs
+    background: Color(0xFFF4F6F8),
     surface: Color(0xFFFFFFFF),
-    // Primary brand color - Pastel blue for trust and professionalism
-    primary: Color(0xFF7AB2D3),
-    // Secondary accent - Pastel mint green for positivity
-    secondary: Color(0xFFA8D5BA),
-    // Text colors
-    onBackground: Color(0xFF1A2E35),
-    onSurface: Color(0xFF4A5B66),
-    // Border and outline colors
-    outline: Color(0xFFDCE1E6),
-    // Additional colors
-    tertiary: Color(0xFFF8FAFB),
-    onTertiary: Color(0xFF2C3E50),
-    // Error colors - Soft coral for alerts
+    primary: Color(0xFF417FB1),
+    secondary: Color(0xFF89C2A5),
+    onBackground: Color(0xFF15232D),
+    onSurface: Color(0xFF3C4F60),
+    outline: Color(0xFFC5CED6),
+    tertiary: Color(0xFFF2F7F9),
+    onTertiary: Color(0xFF243645),
     error: Color(0xFFFF9999),
     onError: Color(0xFFFFFFFF),
-    // Success/positive colors - Soft green for goal progress
-    inversePrimary: Color(0xFFB2E4C9),
-    // Additional semantic colors
-    surfaceVariant: Color(0xFFEFF3F5),
-    onSurfaceVariant: Color(0xFF5E7380),
-    primaryContainer: Color(0xFFD6E8F2),
-    onPrimaryContainer: Color(0xFF1A3C4E),
+    inversePrimary: Color(0xFF9AD8B8),
+    surfaceVariant: Color(0xFFE3EBF1),
+    onSurfaceVariant: Color(0xFF4C6170),
+    primaryContainer: Color(0xFFB1CDE0),
+    onPrimaryContainer: Color(0xFF132B3C),
   ),
+
   // Card theme
   cardTheme: const CardThemeData(
     elevation: 2,
@@ -182,5 +203,4 @@ class AppColors {
   static const statusWarning = Color(0xFFFBCFAB); // Soft peach
   static const statusError = Color(0xFFFF9999); // Soft coral
   static const statusInfo = Color(0xFFB3CDE0); // Light pastel blue
-
 }
