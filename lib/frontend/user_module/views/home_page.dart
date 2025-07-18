@@ -139,19 +139,54 @@ class HomePage extends StatelessWidget {
                     ),
                     title: Text(tx.category),
                     subtitle: Text(tx.description ?? 'No description'),
-                    trailing: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '₹${tx.amount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color:
-                            tx.isExpense ? Colors.red : Colors.green,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${tx.amount.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                color:
+                                tx.isExpense ? Colors.red : Colors.green,
+                              ),
+                            ),
+                            Text(
+                              tx.transactionDate.toLocal().toString().split(' ')[0],
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
                         ),
-                        Text(
-                          tx.transactionDate.toLocal().toString().split(' ')[0],
-                          style: const TextStyle(fontSize: 12),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            // Show confirmation dialog
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Delete Transaction'),
+                                  content: Text('Are you sure you want to delete this ${tx.isExpense ? 'expense' : 'income'} of ₹${tx.amount.toStringAsFixed(2)}?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        print('HomePage: Deleting transaction: ${tx.transactionId}');
+                                        controller.deleteTransaction(tx.transactionId!);
+                                      },
+                                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
                         ),
                       ],
                     ),

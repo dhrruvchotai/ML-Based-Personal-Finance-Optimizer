@@ -65,18 +65,27 @@ class TransactionController extends GetxController{
 
   Future<void> deleteTransaction(String transactionId) async{
     try{
+      print('TransactionController: Starting to delete transaction: $transactionId');
       isLoading.value = true;
       errorMessage.value = '';
+      
       final success = await _service.deleteTransaction(transactionId);
+      print('TransactionController: Delete transaction result: $success');
+      
       if(success){
+        print('TransactionController: Removing transaction from local list');
         transactions.removeWhere((t) => t.transactionId == transactionId);
+        print('TransactionController: Transaction deleted successfully. Remaining transactions: ${transactions.length}');
       }else{
+        print('TransactionController: Failed to delete transaction');
         errorMessage.value = 'Failed to delete transaction';
       }
     }catch(e){
+      print('TransactionController: Error in deleteTransaction: $e');
       errorMessage.value = e.toString();
     }finally{
       isLoading.value = false;
+      print('TransactionController: Delete transaction completed. Loading: ${isLoading.value}');
     }
   }
 }
