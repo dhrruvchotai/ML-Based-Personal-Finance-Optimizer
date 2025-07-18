@@ -5,6 +5,7 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/utils/a
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_up_page_view.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/chatbot_view/chatbot_screen.dart';
 
 void main() async{
   await dotenv.load(fileName: ".env");
@@ -38,6 +39,12 @@ class MyApp extends StatelessWidget {
           name: '/homePage',
           page: () => HomePage(),
           transition: Transition.downToUp,
+    transitionDuration: Duration(milliseconds: 300),
+        ),
+        GetPage(
+          name: '/chatbot',
+          page: () => ChatBotScreen(),
+          transition: Transition.rightToLeft,
           transitionDuration: Duration(milliseconds: 300),
         ),
       ],
