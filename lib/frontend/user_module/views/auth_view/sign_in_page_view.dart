@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../controllers/auth_controller/sign_up_controller.dart';
 import '../../custom_widgets/auth_widgets/animated_button_widget.dart';
+import '../../custom_widgets/auth_widgets/animated_login_link_widget.dart';
 import '../../custom_widgets/auth_widgets/animated_text_field_widget.dart';
 
 
@@ -104,11 +105,19 @@ class SignInPage extends StatelessWidget {
                       Obx(() => AnimatedSignInButton(
                         label: controller.isLoading.value ? 'Signing In...' : 'Sign In',
                         icon: Icons.login,
-                        onPressed: () => controller.isLoading.value
+                        onPressed: controller.isLoading.value
                             ? null
-                            : () => controller.signUp(context, _formKey),
+                            : () {
+                                if (_formKey.currentState!.validate()) {
+                                  controller.signUp(context, _formKey);
+                                }
+                              },
                       )),
                       const SizedBox(height: 12),
+
+                      SignInLoginLink(text: 'New user? ',linkText: 'Sign Up',onTap: () {
+                        Get.back();
+                      },),
                     ],
                   ),
                 ),

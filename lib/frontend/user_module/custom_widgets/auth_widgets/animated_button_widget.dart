@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class AnimatedSignInButton extends StatefulWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final IconData icon;
 
   const AnimatedSignInButton({
@@ -44,9 +44,9 @@ class _AnimatedSignInButtonState extends State<AnimatedSignInButton> with Single
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
+      onTapDown: widget.onPressed != null ? ((_) => _controller.forward()) : null,
+      onTapUp: widget.onPressed != null ? ((_) => _controller.reverse()) : null,
+      onTapCancel: widget.onPressed != null ? (() => _controller.reverse()) : null,
       onTap: widget.onPressed,
       child: ScaleTransition(
         scale: _scaleAnimation,

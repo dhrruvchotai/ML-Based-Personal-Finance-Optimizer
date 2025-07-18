@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/utils/app_themes/app_theme.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_up_page_view.dart';
-import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
 
 void main() async{
   await dotenv.load(fileName: ".env");
@@ -19,7 +19,21 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
-      home: HomePage(),
+      initialRoute: '/signup',
+      getPages: [
+        GetPage(
+          name: '/signup',
+          page: () => SignUpPage(),
+            transition: Transition.upToDown,
+          transitionDuration: Duration(milliseconds: 200),
+        ),
+        GetPage(
+          name: '/signin',
+          page: () => SignInPage(),
+          transition: Transition.downToUp,
+    transitionDuration: Duration(milliseconds: 300),
+        ),
+      ],
     );
   }
 }
