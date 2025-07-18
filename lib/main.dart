@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/utils/app_themes/app_theme.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_up_page_view.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/chatbot_view/chatbot_screen.dart';
 
 void main() async{
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
-      initialRoute: '/chatbot',
+      initialRoute: '/homePage',
       getPages: [
         GetPage(
           name: '/signup',
@@ -31,6 +32,12 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: '/signin',
           page: () => SignInPage(),
+          transition: Transition.downToUp,
+          transitionDuration: Duration(milliseconds: 300),
+        ),
+        GetPage(
+          name: '/homePage',
+          page: () => HomePage(),
           transition: Transition.downToUp,
     transitionDuration: Duration(milliseconds: 300),
         ),
@@ -118,14 +125,6 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              icon: Icon(Icons.chat),
-              label: Text('Open Chatbot'),
-              onPressed: () {
-                Get.toNamed('/chatbot');
-              },
             ),
           ],
         ),
