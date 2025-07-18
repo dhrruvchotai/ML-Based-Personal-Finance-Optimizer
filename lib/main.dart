@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/utils/app_themes/app_theme.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_up_page_view.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/chatbot_view/chatbot_screen.dart';
 
 import 'firebase_options.dart';
 
@@ -38,7 +40,19 @@ class MyApp extends StatelessWidget {
           name: '/signin',
           page: () => SignInPage(),
           transition: Transition.downToUp,
+          transitionDuration: Duration(milliseconds: 300),
+        ),
+        GetPage(
+          name: '/homePage',
+          page: () => HomePage(),
+          transition: Transition.downToUp,
     transitionDuration: Duration(milliseconds: 300),
+        ),
+        GetPage(
+          name: '/chatbot',
+          page: () => ChatBotScreen(),
+          transition: Transition.rightToLeft,
+          transitionDuration: Duration(milliseconds: 300),
         ),
       ],
     );
