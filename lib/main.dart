@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
@@ -5,8 +6,14 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/utils/a
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_up_page_view.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
 
+import 'firebase_options.dart';
+
 void main() async{
   await dotenv.load(fileName: ".env");
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 

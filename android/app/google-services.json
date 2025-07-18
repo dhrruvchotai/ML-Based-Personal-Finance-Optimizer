@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "411157370253",
+    "project_id": "ml-based-personal-finance",
+    "storage_bucket": "ml-based-personal-finance.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:411157370253:android:c6c7c371d670fc905f19c4",
+        "android_client_info": {
+          "package_name": "com.example.ml_based_personal_finance_optimizer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDV0CfzdHAlDwzT-Uk0VgW1jSTLqzhTg9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
