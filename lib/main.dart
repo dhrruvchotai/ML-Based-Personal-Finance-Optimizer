@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
@@ -7,8 +8,14 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/a
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/chatbot_view/chatbot_screen.dart';
 
+import 'firebase_options.dart';
+
 void main() async{
   await dotenv.load(fileName: ".env");
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -21,7 +28,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
-      initialRoute: '/homePage',
+      initialRoute: '/signup',
       getPages: [
         GetPage(
           name: '/signup',

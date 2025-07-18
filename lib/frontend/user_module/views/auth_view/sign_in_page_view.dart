@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../controllers/auth_controller/sign_up_controller.dart';
+import '../../controllers/auth_controller/sign_up_sign_in_controller.dart';
 import '../../custom_widgets/auth_widgets/animated_button_widget.dart';
 import '../../custom_widgets/auth_widgets/animated_login_link_widget.dart';
 import '../../custom_widgets/auth_widgets/animated_text_field_widget.dart';
@@ -11,7 +11,7 @@ class SignInPage extends StatelessWidget {
   SignInPage({Key? key}) : super(key: key);
 
   final _formKey = GlobalKey<FormState>();
-  final SignUpController controller = Get.put(SignUpController());
+  final SignUpSignInController controller = Get.put(SignUpSignInController());
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +109,7 @@ class SignInPage extends StatelessWidget {
                             ? null
                             : () {
                                 if (_formKey.currentState!.validate()) {
-                                  controller.signUp(context, _formKey);
+                                  controller.loginWithEmail(_formKey);
                                 }
                               },
                       )),
