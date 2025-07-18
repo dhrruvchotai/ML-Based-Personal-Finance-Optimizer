@@ -37,6 +37,7 @@ dependencies:
   http:
   get:
   intl:
+  image_picker:
   flutter_dotenv: ^5.2.1
 
 dev_dependencies:

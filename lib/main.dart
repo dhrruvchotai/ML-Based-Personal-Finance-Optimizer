@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/utils/app_themes/app_theme.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_up_page_view.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 
 void main() async{
   await dotenv.load(fileName: ".env");
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
-      initialRoute: '/signup',
+      initialRoute: '/homePage',
       getPages: [
         GetPage(
           name: '/signup',
@@ -31,7 +32,13 @@ class MyApp extends StatelessWidget {
           name: '/signin',
           page: () => SignInPage(),
           transition: Transition.downToUp,
-    transitionDuration: Duration(milliseconds: 300),
+          transitionDuration: Duration(milliseconds: 300),
+        ),
+        GetPage(
+          name: '/homePage',
+          page: () => HomePage(),
+          transition: Transition.downToUp,
+          transitionDuration: Duration(milliseconds: 300),
         ),
       ],
     );
