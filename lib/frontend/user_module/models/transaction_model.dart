@@ -1,5 +1,5 @@
 class TransactionModel {
-  final String transactionId;
+  final String? transactionId;
   final String userId;
   final double amount;
   final String? description;
@@ -8,7 +8,7 @@ class TransactionModel {
   final String category;
 
   TransactionModel({
-    required this.transactionId,
+    this.transactionId,
     required this.userId,
     required this.amount,
     this.description,
@@ -18,25 +18,48 @@ class TransactionModel {
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    return TransactionModel(
-      transactionId: json['transaction_id'],
-      userId: json['user_id'],
-      amount: (json['amount'] as num).toDouble(),
-      description: json['description'],
-      isExpense: json['is_expense'],
-      transactionDate: DateTime.parse(json['transaction_date']),
-      category: json['category'],
-    );
+    try {
+      print('TransactionModel: Parsing JSON: $json');
+      
+      // Handle different date formats
+      DateTime transactionDate;
+      if (json['transactionDate'] is String) {
+        transactionDate = DateTime.parse(json['transactionDate']);
+      } else if (json['transactionDate'] is DateTime) {
+        transactionDate = json['transactionDate'];
+      } else {
+        // Fallback to current date if parsing fails
+        transactionDate = DateTime.now();
+        print('TransactionModel: Warning - Could not parse transaction_date, using current date');
+      }
+      
+      final model = TransactionModel(
+        transactionId: json['_id'],
+        userId: json['userId'],
+        amount: (json['amount'] as num).toDouble(),
+        description: json['description'],
+        isExpense: json['isExpense'],
+        transactionDate: transactionDate,
+        category: json['category'],
+      );
+      
+      print('TransactionModel: Successfully created model: $model');
+      return model;
+    } catch (e) {
+      print('TransactionModel: Error parsing JSON: $e');
+      print('TransactionModel: Problematic JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'transaction_id': transactionId,
-      'user_id': userId,
+      // '_id': transactionId,
+      'userId': userId,
+      'transactionDate': transactionDate.toIso8601String(),
+      'isExpense': isExpense,
       'amount': amount,
       'description': description,
-      'is_expense': isExpense,
-      'transaction_date': transactionDate.toIso8601String(),
       'category': category,
     };
   }
