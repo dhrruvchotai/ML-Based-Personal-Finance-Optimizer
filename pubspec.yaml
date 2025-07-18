@@ -38,6 +38,7 @@ dependencies:
   get:
   intl:
   flutter_dotenv: ^5.2.1
+  google_generative_ai: 
 
 dev_dependencies:
   flutter_test:
