@@ -107,9 +107,13 @@ class SignUpPage extends StatelessWidget {
                     Obx(() => AnimatedSignInButton(
                       label: controller.isLoading.value ? 'Signing Up...' : 'Sign Up',
                       icon: Icons.login,
-                      onPressed: () => controller.isLoading.value
+                      onPressed: controller.isLoading.value
                           ? null
-                          : () => controller.signUp(context, _formKey),
+                          : () {
+                              if (_formKey.currentState!.validate()) {
+                                controller.signUp(context, _formKey);
+                              }
+                            },
                     )),
                     const SizedBox(height: 12),
                     // Divider
@@ -129,9 +133,7 @@ class SignUpPage extends StatelessWidget {
                       text: 'Already have an account? ',
                       linkText: 'Sign In',
                       onTap: () {
-                        navigation: Get.to(SignInPage());
-                        // For now, just show a snackbar
-                        Get.snackbar('Info', 'Navigate to login page');
+                        Get.toNamed('/signin', arguments: null);
                       },
                     ),
                   ],
