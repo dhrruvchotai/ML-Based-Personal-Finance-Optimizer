@@ -300,23 +300,19 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              child: Expanded(
-                child: Column(
-                  children: [
-                    _buildTabBar(),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildTransactionForm(),
-                          _buildImageTab(),
-                        ],
-                      ),
-                    ),
-                  ],
+            child: Column(
+              children: [
+                _buildTabBar(),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTransactionForm(),
+                      _buildImageTab(),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],

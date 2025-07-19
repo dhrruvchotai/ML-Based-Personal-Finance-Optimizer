@@ -514,34 +514,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 20, top: 20),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: theme.colorScheme.outline.withOpacity(0.3),
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.notifications_outlined,
-                            color: theme.colorScheme.onSurface,
-                            size: 24,
-                          ),
-                          onPressed: () {},
-                        ),
-                      ),
-                    )
-                  )
-                ),
                 Obx(() => Stack(
                       children: [
                         Container(
@@ -587,24 +559,6 @@ class _HomePageState extends State<HomePage> {
                           ),
                       ],
                     )),
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: isDark ? Colors.white : Colors.black54,
-                    ),
-                    onPressed: () {
-
-                    },
-                  ),
-                ),
               ],
             ),
           ),
@@ -1235,7 +1189,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Dashboard',
                     isActive: true,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+
+                    },
                   ),
                   _ModernBottomNavItem(
                     icon: Icons.analytics_outlined,
@@ -1243,7 +1199,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Analytics',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+                      Get.toNamed('/analysis');
+                    },
                   ),
                   const SizedBox(width: 48), // Space for FAB
                   _ModernBottomNavItem(
@@ -1252,7 +1210,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Accounts',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+                      Get.toNamed('/analysis');
+                    },
                   ),
                   _ModernBottomNavItem(
                     icon: Icons.settings_outlined,
@@ -1260,7 +1220,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Settings',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+                      Get.toNamed('/user-profile');
+                    },
                   ),
                 ],
               ),
