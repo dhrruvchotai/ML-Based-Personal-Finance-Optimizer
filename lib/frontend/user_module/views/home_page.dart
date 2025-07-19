@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
@@ -49,15 +51,49 @@ class HomePage extends StatelessWidget {
         final grouped = _groupTransactionsByDate(txs);
         final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
-        return Column(
+        // Combine balance card, quick actions, and transactions into a single scrollable ListView
+        return ListView(
+          padding: const EdgeInsets.only(bottom: 24),
           children: [
             _buildBalanceCard(context, totalSpend, totalIncome, balance),
             _buildQuickActions(context),
-            Expanded(
-              child: txs.isEmpty
-                  ? _buildEmptyState(context)
-                  : _buildTransactionsList(context, grouped, sortedKeys),
-            ),
+            if (txs.isEmpty)
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.4,
+                child: _buildEmptyState(context),
+              )
+            else
+              ...sortedKeys.map((dateKey) {
+                final txList = grouped[dateKey]!;
+                final dailyIncome = txList.where((tx) => !tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
+                final dailyExpenses = txList.where((tx) => tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.03)
+                        : Colors.grey.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.grey.withOpacity(0.15),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses, containerized: true),
+                      const SizedBox(height: 8),
+                      ...txList.map((tx) => _ModernTransactionCard(
+                        tx: tx,
+                        onDelete: () => _showDeleteDialog(context, tx),
+                      )),
+                    ],
+                  ),
+                );
+              }).toList(),
           ],
         );
       }),
@@ -71,50 +107,64 @@ class HomePage extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return AppBar(
-      elevation: 0,
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-      surfaceTintColor: Colors.transparent,
-      toolbarHeight: 80,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'FinanceTracker',
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(80),
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            color: isDark
+                ? const Color(0xFF1A1A1A).withOpacity(0.3)
+                : Colors.white.withOpacity(0.3),
+            child: AppBar(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              toolbarHeight: 80,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'FinanceTracker',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  Text(
+                    DateFormat('MMMM yyyy').format(DateTime.now()),
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: isDark ? Colors.white : Colors.black54,
+                    ),
+                    onPressed: () {},
+                  ),
+                ),
+              ],
             ),
-          ),
-          Text(
-            DateFormat('MMMM yyyy').format(DateTime.now()),
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.black54,
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.notifications_outlined,
-              color: isDark ? Colors.white : Colors.black54,
-            ),
-            onPressed: () {},
           ),
         ),
-      ],
+      ),
     );
   }
+
 
   Widget _buildBalanceItem(BuildContext context, String label, String amount, IconData icon, Color color, bool isDark) {
     return Container(
@@ -383,17 +433,17 @@ class HomePage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+          color: isDark ? const Color(0xFF232323) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: color.withOpacity(0.13), // more subtle border
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark ? Colors.transparent : Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: isDark ? Colors.transparent : Colors.black.withOpacity(0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -403,7 +453,7 @@ class HomePage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.08), // faint color accent for icon only
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(icon, color: color, size: 14),
@@ -413,7 +463,7 @@ class HomePage extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: isDark ? Colors.white.withOpacity(0.92) : Colors.black.withOpacity(0.85),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -471,26 +521,83 @@ class HomePage extends StatelessWidget {
         final dailyIncome = txList.where((tx) => !tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
         final dailyExpenses = txList.where((tx) => tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses),
-            const SizedBox(height: 8),
-            ...txList.map((tx) => _ModernTransactionCard(
-              tx: tx,
-              onDelete: () => _showDeleteDialog(context, tx),
-            )),
-            const SizedBox(height: 16),
-          ],
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.03)
+                : Colors.grey.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.grey.withOpacity(0.15),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses, containerized: true),
+              const SizedBox(height: 8),
+              ...txList.map((tx) => _ModernTransactionCard(
+                tx: tx,
+                onDelete: () => _showDeleteDialog(context, tx),
+              )),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildDateHeader(BuildContext context, String dateKey, double income, double expenses) {
+  // Update _buildDateHeader to optionally remove its own container styling
+  Widget _buildDateHeader(BuildContext context, String dateKey, double income, double expenses, {bool containerized = false}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    if (containerized) {
+      // Just return the row, no container
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _getDateLabel(dateKey),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          Row(
+            children: [
+              if (income > 0) ...[
+                Text(
+                  '+₹${income.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (expenses > 0)
+                Text(
+                  '-₹${expenses.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Original container style for non-containerized usage
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -571,11 +678,7 @@ class HomePage extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+       color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -604,54 +707,79 @@ class HomePage extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: BottomAppBar(
-        elevation: 0,
-        color: Colors.transparent,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _ModernBottomNavItem(
-                icon: Icons.dashboard_outlined,
-                label: 'Dashboard',
-                isActive: true,
-                onTap: () {},
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          height: 90, // Increased height to prevent overflow
+          decoration: BoxDecoration(
+            color: isDark
+                ? theme.colorScheme.surface.withOpacity(0.7)
+                : Colors.white.withOpacity(0.8),
+            border: Border(
+              top: BorderSide(
+                color: theme.colorScheme.outline.withOpacity(0.3),
+                width: 0.5,
               ),
-              _ModernBottomNavItem(
-                icon: Icons.analytics_outlined,
-                label: 'Analytics',
-                isActive: false,
-                onTap: () {},
-              ),
-              const SizedBox(width: 40), // Space for FAB
-              _ModernBottomNavItem(
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Accounts',
-                isActive: false,
-                onTap: () {},
-              ),
-              _ModernBottomNavItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                isActive: false,
-                onTap: () {},
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
               ),
             ],
+          ),
+          child: BottomAppBar(
+            elevation: 0,
+            color: Colors.transparent,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 12,
+            height: 90, // Match container height
+            padding: EdgeInsets.zero, // Remove default padding
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _ModernBottomNavItem(
+                    icon: Icons.dashboard_outlined,
+                    activeIcon: Icons.dashboard_rounded,
+                    label: 'Dashboard',
+                    isActive: true,
+                    theme: theme,
+                    onTap: () {},
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.analytics_outlined,
+                    activeIcon: Icons.analytics_rounded,
+                    label: 'Analytics',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {},
+                  ),
+                  const SizedBox(width: 48), // Space for FAB
+                  _ModernBottomNavItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    activeIcon: Icons.account_balance_wallet_rounded,
+                    label: 'Accounts',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {},
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.settings_outlined,
+                    activeIcon: Icons.settings_rounded,
+                    label: 'Settings',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {},
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -725,14 +853,16 @@ class _ModernTransactionCard extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: tx.isExpense
-                ? Colors.red.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
+            color: isDark
+                ?Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                : Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             _getCategoryIcon(tx.category),
-            color: tx.isExpense ? Colors.red : Colors.green,
+            color: tx.isExpense
+                ? Colors.red.withOpacity(0.7)
+                : Colors.green.withOpacity(0.1),
             size: 24,
           ),
         ),
@@ -781,46 +911,73 @@ class _ModernTransactionCard extends StatelessWidget {
 
 class _ModernBottomNavItem extends StatelessWidget {
   final IconData icon;
+  final IconData? activeIcon;
   final String label;
   final bool isActive;
+  final ThemeData theme;
   final VoidCallback onTap;
 
   const _ModernBottomNavItem({
     required this.icon,
+    this.activeIcon,
     required this.label,
     required this.isActive,
+    required this.theme,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isActive
-                ? const Color(0xFF667eea)
-                : isDark ? Colors.white38 : Colors.black38,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive
-                  ? const Color(0xFF667eea)
-                  : isDark ? Colors.white38 : Colors.black38,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+    // Using your app theme colors
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.colorScheme.onSurface.withOpacity(0.6);
+    final backgroundColor = isActive
+        ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+        : Colors.transparent;
+    final borderColor = isActive
+        ? theme.colorScheme.primary.withOpacity(0.4)
+        : Colors.transparent;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 2), // Small margin to prevent overflow
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: borderColor,
+              width: 1,
             ),
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isActive ? (activeIcon ?? icon) : icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 22, // Slightly smaller to prevent overflow
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10, // Smaller font size to prevent overflow
+                  color: isActive ? activeColor : inactiveColor,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis, // Prevent text overflow
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
