@@ -26,6 +26,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   late Animation<double> _pulseAnimation;
   late Animation<double> _shimmerAnimation;
 
+  // Add a controller for animating the shadow of the TextField
+  late AnimationController _textFieldShadowController;
+  late Animation<double> _textFieldShadowAnimation;
+
   bool _isFocused = false;
 
   @override
@@ -62,9 +66,21 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     _shimmerAnimation = Tween<double>(begin: 0.0, end: 1.0)
         .animate(_shimmerAnimationController);
 
+    _textFieldShadowController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _textFieldShadowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textFieldShadowController, curve: Curves.easeInOut),
+    );
     _focusNode.addListener(() {
       setState(() {
         _isFocused = _focusNode.hasFocus;
+        if (_isFocused) {
+          _textFieldShadowController.forward();
+        } else {
+          _textFieldShadowController.reverse();
+        }
       });
     });
   }
@@ -74,6 +90,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     _borderAnimationController.dispose();
     _pulseAnimationController.dispose();
     _shimmerAnimationController.dispose();
+    _textFieldShadowController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -531,60 +548,48 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
   Widget _buildInputSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
         ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(18),
+          topRight: Radius.circular(18),
+        ),
       ),
       child: SafeArea(
         child: Row(
           children: [
             Expanded(
               child: AnimatedBuilder(
-                animation: _borderAnimation,
+                animation: _textFieldShadowAnimation,
                 builder: (context, child) {
                   return Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      gradient: _isFocused
-                          ? LinearGradient(
-                        colors: [
-                          Color.lerp(
-                            const Color(0xFF667eea),
-                            const Color(0xFF764ba2),
-                            math.sin(_borderAnimation.value * 2 * math.pi) * 0.5 + 0.5,
-                          )!,
-                          Color.lerp(
-                            const Color(0xFF764ba2),
-                            const Color(0xFF667eea),
-                            math.sin(_borderAnimation.value * 2 * math.pi) * 0.5 + 0.5,
-                          )!,
-                        ],
-                        stops: [
-                          math.sin(_borderAnimation.value * 2 * math.pi) * 0.5 + 0.5,
-                          math.cos(_borderAnimation.value * 2 * math.pi) * 0.5 + 0.5,
-                        ],
-                      )
-                          : null,
-                      border: !_isFocused
-                          ? Border.all(
-                        color: const Color(0xFFE8EEFF),
-                        width: 1,
-                      )
-                          : null,
+                      borderRadius: BorderRadius.circular(18),
+                      color: Colors.grey[50],
+                      boxShadow: [
+                        if (_textFieldShadowAnimation.value > 0)
+                          BoxShadow(
+                            color: Colors.blueAccent.withOpacity(0.15 * _textFieldShadowAnimation.value),
+                            blurRadius: 16 * _textFieldShadowAnimation.value,
+                            offset: Offset(0, 2 * _textFieldShadowAnimation.value),
+                          ),
+                      ],
+                      border: Border.all(
+                        color: _isFocused ? Colors.blueAccent.withOpacity(0.5) : const Color(0xFFE8EEFF),
+                        width: _isFocused ? 1.5 : 1,
+                      ),
                     ),
                     padding: EdgeInsets.all(_isFocused ? 2 : 0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8F9FF),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
+                    child: Material(
+                      color: Colors.transparent,
                       child: TextField(
                         controller: _textController,
                         focusNode: _focusNode,
@@ -596,8 +601,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                           ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
+                            horizontal: 18,
+                            vertical: 10,
                           ),
                         ),
                         style: const TextStyle(
@@ -612,45 +617,33 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 },
               ),
             ),
-            const SizedBox(width: 12),
-            AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _pulseAnimation.value,
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6C5CE7), Color(0xFF74B9FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6C5CE7).withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(25),
-                        onTap: _sendMessage,
-                        child: const Icon(
-                          Icons.send_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                    ),
+            const SizedBox(width: 10),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.blueAccent,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blueAccent.withOpacity(0.10),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
-                );
-              },
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: _sendMessage,
+                  child: const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
