@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transactionPage.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
@@ -1128,7 +1129,7 @@ class _HomePageState extends State<HomePage> {
                     label: 'Analytics',
                     isActive: false,
                     theme: theme,
-                    onTap: () => Get.toNamed('/analysis'),
+                    onTap: () {},
                   ),
                   const SizedBox(width: 48), // Space for FAB
                   _ModernBottomNavItem(
@@ -1161,7 +1162,7 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute(
         builder: (context) => AddTransactionPage(
-          currentUserId: currentUserId!,
+          currentUserId: currentUserId,
           controller: controller,
           initialIsExpense: isExpense,
         ),
@@ -1202,7 +1203,6 @@ class _ModernTransactionCard extends StatelessWidget {
         return Icons.category;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
