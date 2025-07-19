@@ -29,10 +29,10 @@ class TransactionController extends GetxController{
   ];
 
   @override
-  void onInit() {
+  void onInit() async{
     super.onInit();
     // Call fetchTransactions without async in onInit
-    fetchTransactions('68793739added15012c8ea8c');
+    await fetchTransactions('687a5088ef80ce4d11f829aa');
   }
 
   // Get transactions to display (filtered or all)

@@ -1065,7 +1065,7 @@ class HomePage extends StatelessWidget {
                     label: 'Analytics',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () => Get.toNamed('/analysis'),
                   ),
                   const SizedBox(width: 48), // Space for FAB
                   _ModernBottomNavItem(
@@ -1139,6 +1139,7 @@ class _ModernTransactionCard extends StatelessWidget {
         return Icons.category;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
