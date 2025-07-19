@@ -122,6 +122,60 @@ class UserProfileView extends StatelessWidget {
                           validator: controller.validatePhone,
                           keyboardType: TextInputType.phone,
                         ),
+                        
+                        // Account Status
+                        Obx(() => controller.user.value.isBlocked != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    controller.user.value.isBlocked! 
+                                      ? Icons.block 
+                                      : Icons.check_circle,
+                                    color: controller.user.value.isBlocked! 
+                                      ? Colors.red 
+                                      : Colors.green,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Account Status: ${controller.user.value.isBlocked! ? 'Blocked' : 'Active'}',
+                                    style: TextStyle(
+                                      color: controller.user.value.isBlocked! 
+                                        ? Colors.red 
+                                        : Colors.green,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink()),
+                        
+                        // Account Creation Date
+                        Obx(() => controller.user.value.createdAt != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 16.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    color: Theme.of(context).colorScheme.primary,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Account Created: ${_formatDate(controller.user.value.createdAt!)}',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink()),
                       ],
                     ),
                   ),
@@ -284,5 +338,10 @@ class UserProfileView extends StatelessWidget {
         fillColor: enabled ? null : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
       ),
     );
+  }
+  
+  // Helper method to format date
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

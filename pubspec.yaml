@@ -46,6 +46,8 @@ dependencies:
   firebase_core:
   google_sign_in: ^6.3.0
   google_generative_ai:
+  fl_chart: ^0.68.0
+  syncfusion_flutter_charts: ^27.1.44
 
 dev_dependencies:
   flutter_test:
