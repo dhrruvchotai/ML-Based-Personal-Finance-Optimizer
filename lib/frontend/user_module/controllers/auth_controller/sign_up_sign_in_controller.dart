@@ -36,7 +36,7 @@ class SignUpSignInController extends GetxController {
     return null;
   }
 
-  void signUp(GlobalKey<FormState> formKey) async {
+  void signUpUsingEmail(GlobalKey<FormState> formKey) async {
     final SignUpSignInController controller = Get.find<SignUpSignInController>();
     if (!formKey.currentState!.validate()) return;
     isLoading.value = true;
@@ -75,7 +75,6 @@ class SignUpSignInController extends GetxController {
     isLoading.value = true;
     final user = await authModel.loginWithEmail(emailController.text, passwordController.text);
     if(user != null){
-
       //this need to be managed before push
       Get.off(HomePage());
 
@@ -105,11 +104,12 @@ class SignUpSignInController extends GetxController {
     isLoading.value = false;
   }
 
-  void googleSignUp() async {
+  void loginUsingGoogle() async {
     isLoading.value = true;
     final user = await authModel.loginWithGoogle();
     if(user != null){
-
+      print("=====================Google Login User : ");
+      print(user.user);
       //this need to be managed before push
       Get.off(HomePage());
       Get.snackbar(

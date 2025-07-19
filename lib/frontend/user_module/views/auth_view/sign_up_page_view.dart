@@ -111,7 +111,7 @@ class SignUpPage extends StatelessWidget {
                           ? null
                           : () {
                               if (_formKey.currentState!.validate()) {
-                                controller.signUp(_formKey);
+                                controller.signUpUsingEmail(_formKey);
                               }
                             },
                     )),
@@ -123,7 +123,7 @@ class SignUpPage extends StatelessWidget {
                     Obx(() => ContinueWithGoogleButton(
                       onPressed: controller.isLoading.value
                           ? null
-                          : () => controller.googleSignUp(),
+                          : () => controller.loginUsingGoogle(),
                       isLoading: controller.isLoading.value,
                       delay: 200,
                     )),
