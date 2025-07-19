@@ -10,6 +10,7 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/c
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/settings_view/user_profile_view.dart';
 
 import 'firebase_options.dart';
+import 'frontend/admin_module/views/admin_view/admin_dashboard.dart';
 
 void main() async{
   await dotenv.load(fileName: ".env");
@@ -58,6 +59,12 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: '/user-profile',
           page: () => UserProfileView(),
+          transition: Transition.rightToLeft,
+          transitionDuration: Duration(milliseconds: 300),
+        ),
+        GetPage(
+          name: '/admin-dashboard',
+          page: () => AdminDashboard(),
           transition: Transition.rightToLeft,
           transitionDuration: Duration(milliseconds: 300),
         ),

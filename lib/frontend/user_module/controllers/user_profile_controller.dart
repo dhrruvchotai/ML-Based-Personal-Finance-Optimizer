@@ -4,8 +4,10 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/user_model.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserProfileController extends GetxController {
   // Form controllers
@@ -24,10 +26,18 @@ class UserProfileController extends GetxController {
   // User data
   final Rx<UserModel> user = UserModel().obs;
   
+  // API base URL
+  final String baseUrl = dotenv.env['BASE_URL'] ?? 'http://localhost:5000';
+  
+  // User ID from SharedPreferences
+  final RxString userId = ''.obs;
+  
   @override
   void onInit() {
     super.onInit();
-    loadUserData();
+    getUserIdFromSharedPreferences().then((_) {
+      fetchUserDataFromBackend();
+    });
   }
   
   @override
@@ -38,7 +48,92 @@ class UserProfileController extends GetxController {
     super.onClose();
   }
   
-  // Load user data from shared preferences
+  // Get userId from SharedPreferences
+  Future<void> getUserIdFromSharedPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? storedUserId = prefs.getString('userId');
+      
+      if (storedUserId != null && storedUserId.isNotEmpty) {
+        userId.value = storedUserId;
+        print('UserID loaded from SharedPreferences: ${userId.value}');
+      } else {
+        print('No userId found in SharedPreferences');
+      }
+    } catch (e) {
+      print('Error getting userId from SharedPreferences: $e');
+    }
+  }
+  
+  // Fetch user data from backend based on userId
+  Future<void> fetchUserDataFromBackend() async {
+    if (userId.value.isEmpty) {
+      print('Cannot fetch user data: userId is empty');
+      loadUserData(); // Fallback to local data
+      return;
+    }
+    
+    isLoading.value = true;
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/getAllUsers'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> users = json.decode(response.body);
+        
+        // Find the user with matching ID
+        final matchingUser = users.firstWhere(
+          (user) => user['_id'] == userId.value,
+          orElse: () => null,
+        );
+        
+        if (matchingUser != null) {
+          // Create UserModel from backend data using the new method
+          user.value = UserModel.fromBackendJson(matchingUser);
+          
+          // Set the text controllers
+          usernameController.text = user.value.username ?? '';
+          emailController.text = user.value.email ?? '';
+          phoneController.text = user.value.phoneNumber ?? '';
+          
+          // Load profile image if it exists
+          if (user.value.profileImagePath != null && 
+              user.value.profileImagePath!.isNotEmpty) {
+            if (user.value.profileImagePath!.startsWith('http')) {
+              // For remote images (URLs), we don't set selectedImage yet
+              profileImagePath.value = user.value.profileImagePath!;
+            } else if (File(user.value.profileImagePath!).existsSync()) {
+              // For local images, set selectedImage if the file exists
+              profileImagePath.value = user.value.profileImagePath!;
+              selectedImage.value = File(profileImagePath.value);
+            }
+          }
+          
+          // Save the user data to shared preferences for offline access
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_data', user.value.toJsonString());
+          
+          print('User data fetched from backend successfully for userId: ${userId.value}');
+        } else {
+          print('User with ID ${userId.value} not found in backend');
+          loadUserData(); // Fallback to local data
+        }
+      } else {
+        print('Failed to fetch user data: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        loadUserData(); // Fallback to local data
+      }
+    } catch (e) {
+      print('Error fetching user data from backend: $e');
+      loadUserData(); // Fallback to local data
+    } finally {
+      isLoading.value = false;
+    }
+  }
+  
+  // Load user data from shared preferences as fallback
   Future<void> loadUserData() async {
     isLoading.value = true;
     try {
@@ -60,6 +155,8 @@ class UserProfileController extends GetxController {
           profileImagePath.value = user.value.profileImagePath!;
           selectedImage.value = File(profileImagePath.value);
         }
+      } else {
+        print('No user data found in SharedPreferences');
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
@@ -68,7 +165,7 @@ class UserProfileController extends GetxController {
     }
   }
   
-  // Save user data to shared preferences
+  // Save user data to backend and shared preferences
   Future<void> saveUserData() async {
     isLoading.value = true;
     try {
@@ -80,8 +177,36 @@ class UserProfileController extends GetxController {
         profileImagePath: profileImagePath.value,
       );
       
+      // Save locally
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_data', user.value.toJsonString());
+      
+      // Update backend if we have a userId
+      if (userId.value.isNotEmpty) {
+        try {
+          final response = await http.put(
+            Uri.parse('$baseUrl/api/users/updateUser/${userId.value}'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'userName': user.value.username,
+              'email': user.value.email,
+              'phoneNumber': user.value.phoneNumber,
+              // Only include profile image path if it's a URL (not a local path)
+              if (user.value.profileImagePath != null && user.value.profileImagePath!.startsWith('http'))
+                'profileImagePath': user.value.profileImagePath,
+            }),
+          );
+          
+          if (response.statusCode == 200) {
+            print('User data updated in backend successfully');
+          } else {
+            print('Failed to update user in backend: ${response.statusCode}');
+            print('Response body: ${response.body}');
+          }
+        } catch (e) {
+          print('Error updating user in backend: $e');
+        }
+      }
       
       Get.snackbar(
         'Success',
@@ -131,7 +256,7 @@ class UserProfileController extends GetxController {
         // Update user model
         user.value = user.value.copyWith(profileImagePath: filePath);
         
-        // Save to shared preferences
+        // Save to shared preferences and backend
         saveUserData();
       }
     } catch (e) {
