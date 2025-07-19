@@ -12,6 +12,7 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/a
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/goals_view/goals_page.dart';
 import 'firebase_options.dart';
 import 'frontend/admin_module/views/admin_view/admin_dashboard.dart';
+import 'frontend/user_module/controllers/theme_controller/theme_controller.dart';
 import 'frontend/user_module/controllers/transaction_controllers/transaction_controller.dart';
 
 void main() async{
@@ -30,9 +31,11 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final themeController = Get.put(ThemeController());
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
+      darkTheme: darkMode,
       initialRoute: '/signup',
       getPages: [
         GetPage(

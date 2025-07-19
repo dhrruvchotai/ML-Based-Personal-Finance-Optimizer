@@ -350,13 +350,15 @@ class GoalsPage extends StatelessWidget {
       floatingActionButton: Obx(() {
         if (controller.goals.isNotEmpty) {
           return FloatingActionButton(
+            elevation: 1,
             onPressed: () => Get.to(() => AddGoalPage()),
             backgroundColor: theme.colorScheme.primary,
-            child: const Icon(Icons.add),
+            child: const Icon(Icons.add,color: Colors.white,),
           );
         }
         return const SizedBox.shrink();
       }),
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked,
     );
   }
 
@@ -578,7 +580,8 @@ Widget _buildModernBottomNav(BuildContext context) {
                   onTap: () {
                     Get.toNamed('/analysis');
                   },
-                ), // Space for FAB
+                ), //
+                const SizedBox(width: 48),// Space for FAB
                 _ModernBottomNavItem(
                   icon: Icons.flag_outlined,
                   activeIcon: Icons.flag_rounded,
