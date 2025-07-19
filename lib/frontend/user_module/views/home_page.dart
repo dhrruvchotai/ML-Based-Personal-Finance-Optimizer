@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transactionPage.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
