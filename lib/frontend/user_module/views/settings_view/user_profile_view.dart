@@ -53,6 +53,9 @@ class UserProfileView extends StatelessWidget {
                 )),
         ],
       ),
+      floatingActionButton: FloatingActionButton(child: Icon(Icons.chat),onPressed:() {
+        Get.toNamed('/chatbot');
+      },),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());

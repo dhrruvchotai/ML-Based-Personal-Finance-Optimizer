@@ -11,6 +11,7 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/s
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/analysis_view/analysis_page.dart';
 import 'firebase_options.dart';
 import 'frontend/admin_module/views/admin_view/admin_dashboard.dart';
+import 'frontend/user_module/controllers/transaction_controllers/transaction_controller.dart';
 
 void main() async{
   await dotenv.load(fileName: ".env");
@@ -18,6 +19,7 @@ void main() async{
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  Get.put(TransactionController());
   runApp(const MyApp());
 }
 
@@ -30,7 +32,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
-      initialRoute: '/chatbot',
+      initialRoute: '/signup',
       getPages: [
         GetPage(
           name: '/signup',
