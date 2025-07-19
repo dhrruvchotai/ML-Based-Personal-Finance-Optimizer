@@ -2,16 +2,79 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 
-class HomePage extends StatelessWidget {
-  final TransactionController controller = Get.put(TransactionController());
-  final String currentUserId = "687a5088ef80ce4d11f829aa";
+import 'settings_view/user_profile_view.dart';
 
-  HomePage({super.key}) {
-    controller.fetchTransactions(currentUserId);
+class HomePage extends StatefulWidget {
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final TransactionController controller = Get.put(TransactionController());
+  String? currentUserId;
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserIdAndFetch();
+    // Don't call fetchTransactions here because currentUserId is still null
+    // controller.fetchTransactions(currentUserId!); // This line causes the error
+  }
+
+  Future<void> _loadUserIdAndFetch() async {
+    print("HomePage: Loading userId from SharedPreferences");
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    currentUserId = prefs.getString("userId");
+
+    print("HomePage: Loaded userId: $currentUserId");
+
+    setState(() {});  // Update UI with userId
+
+    if (currentUserId != null && currentUserId!.isNotEmpty) {
+      print("HomePage: Fetching transactions for userId: $currentUserId");
+      controller.fetchTransactions(currentUserId!);
+    } else {
+      print("HomePage: WARNING - User ID not found in shared preferences.");
+
+      // If userId is not available, try to load it again after a short delay
+      // This handles race conditions with authentication
+      await Future.delayed(Duration(milliseconds: 800), () async {
+        prefs = await SharedPreferences.getInstance();
+        currentUserId = prefs.getString("userId");
+
+        print("HomePage: Retry loading userId: $currentUserId");
+
+        setState(() {});  // Update UI with userId
+
+        if (currentUserId != null && currentUserId!.isNotEmpty) {
+          print("HomePage: Now fetching transactions after retry for userId: $currentUserId");
+          controller.fetchTransactions(currentUserId!);
+        } else {
+          print("HomePage: CRITICAL - Still no userId after retry");
+          Get.snackbar(
+            'Warning',
+            'Could not identify your account. Some features may not work correctly.',
+            backgroundColor: Colors.orange.withOpacity(0.7),
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 5),
+          );
+        }
+      });
+    }
+  }
+
+
+  Future<String?> getUserId() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString("userId");
   }
 
   // Show filter dialog
@@ -1098,7 +1161,7 @@ class HomePage extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => AddTransactionPage(
-          currentUserId: currentUserId,
+          currentUserId: currentUserId!,
           controller: controller,
           initialIsExpense: isExpense,
         ),
