@@ -1,205 +1,826 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatelessWidget {
   final TransactionController controller = Get.put(TransactionController());
-  // Use a valid MongoDB ObjectId format (24 characters)
-  final String currentUserId = "68793739added15012c8ea8c"; // Same as used in controller
+  final String currentUserId = "687a5088ef80ce4d11f829aa";
 
   HomePage({super.key}) {
-    print('HomePage: Initializing with userId: $currentUserId');
     controller.fetchTransactions(currentUserId);
   }
 
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController categoryController = TextEditingController();
-  RxBool isExpense = true.obs;
+  Map<String, List<TransactionModel>> _groupTransactionsByDate(List<TransactionModel> txs) {
+    final Map<String, List<TransactionModel>> grouped = {};
+    for (var tx in txs) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(tx.transactionDate);
+      if (!grouped.containsKey(dateKey)) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey]!.add(tx);
+    }
+    return grouped;
+  }
 
-  void _showAddTransactionSheet(BuildContext context) {
-    amountController.clear();
-    descriptionController.clear();
-    categoryController.clear();
-    isExpense.value = true;
+  String _getDateLabel(String dateKey) {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final yesterday = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1)));
+    if (dateKey == today) return 'Today';
+    if (dateKey == yesterday) return 'Yesterday';
+    return DateFormat('MMM dd, yyyy').format(DateTime.parse(dateKey));
+  }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: MediaQuery.of(context).viewInsets,
-          child: Form(
-            key: _formKey,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      appBar: _buildModernAppBar(context),
+      body: Obx(() {
+        final txs = controller.transactions;
+        final totalSpend = txs.where((e) => e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
+        final totalIncome = txs.where((e) => !e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
+        final balance = totalIncome - totalSpend;
+        final grouped = _groupTransactionsByDate(txs);
+        final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+        return Column(
+          children: [
+            _buildBalanceCard(context, totalSpend, totalIncome, balance),
+            _buildQuickActions(context),
+            Expanded(
+              child: txs.isEmpty
+                  ? _buildEmptyState(context)
+                  : _buildTransactionsList(context, grouped, sortedKeys),
+            ),
+          ],
+        );
+      }),
+      floatingActionButton: _buildModernFAB(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: _buildModernBottomNav(context),
+    );
+  }
+
+  PreferredSizeWidget _buildModernAppBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return AppBar(
+      elevation: 0,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      toolbarHeight: 80,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'FinanceTracker',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          Text(
+            DateFormat('MMMM yyyy').format(DateTime.now()),
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.notifications_outlined,
+              color: isDark ? Colors.white : Colors.black54,
+            ),
+            onPressed: () {},
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBalanceItem(BuildContext context, String label, String amount, IconData icon, Color color, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18), // Slightly bigger icon
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.8)
+                        : Colors.black.withOpacity(0.6),
+                    fontSize: 13, // Slightly bigger label font
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 18, // Bigger amount font (was 16)
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // New compact balance card
+  Widget _buildBalanceCard(BuildContext context, double totalSpend, double totalIncome, double balance) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            // Changed background color - more subtle and modern
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [
+                const Color(0xFF2D3748),
+                const Color(0xFF4A5568),
+              ]
+                  : [
+                const Color(0xFFEDF2F7),
+                const Color(0xFFE2E8F0),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            // Added semi-transparent border
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.15)
+                  : Colors.black.withOpacity(0.08),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.grey.withOpacity(0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Total Balance',
+                style: TextStyle(
+                  color: isDark ? Colors.white.withOpacity(0.9) : Colors.black.withOpacity(0.7),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '₹${balance.toStringAsFixed(0)}',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
                 children: [
-                  TextFormField(
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Amount'),
-                    validator: (value) =>
-                    value!.isEmpty ? 'Enter amount' : null,
+                  Expanded(
+                    child: _buildBalanceItem(
+                      context,
+                      'Income',
+                      '₹${totalIncome.toStringAsFixed(0)}',
+                      Icons.trending_up,
+                      Colors.green,
+                      isDark,
+                    ),
                   ),
-                  TextFormField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: 'Description'),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: isDark
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.2),
                   ),
-                  TextFormField(
-                    controller: categoryController,
-                    decoration: const InputDecoration(labelText: 'Category'),
-                    validator: (value) =>
-                    value!.isEmpty ? 'Enter category' : null,
-                  ),
-                  Row(
-                    children: [
-                      const Text("Is Expense?"),
-                      Obx(
-                        () =>  Switch(
-                          value: isExpense.value,
-                          onChanged: (val) {
-                            isExpense.value = val;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  ElevatedButton(
-                    child: const Text("Add Transaction"),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        print('HomePage: Form validated, creating transaction...');
-                        print('HomePage: Amount: ${amountController.text}');
-                        print('HomePage: Description: ${descriptionController.text}');
-                        print('HomePage: Category: ${categoryController.text}');
-                        print('HomePage: IsExpense: ${isExpense.value}');
-                        print('HomePage: UserId: $currentUserId');
-                        
-                        final transaction = TransactionModel(
-                          userId: currentUserId,
-                          amount: double.parse(amountController.text),
-                          description: descriptionController.text,
-                          category: categoryController.text,
-                          isExpense: isExpense.value,
-                          transactionDate: DateTime.now(),
-                        );
-                        
-                        print('HomePage: Created transaction model: $transaction');
-                        controller.addTransaction(transaction);
-                        print('HomePage: Called controller.addTransaction');
-                        
-                        // Close the bottom sheet
-                        Navigator.pop(context);
-                      }
-                    },
+                  Expanded(
+                    child: _buildBalanceItem(
+                      context,
+                      'Expenses',
+                      '₹${totalSpend.toStringAsFixed(0)}',
+                      Icons.trending_down,
+                      Colors.red,
+                      isDark,
+                    ),
                   ),
                 ],
               ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: Center(
+            child: Container(
+              height: 70,
+              width: 70,
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.9),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(50),
+                  bottomRight: Radius.circular(8),
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(12),
+                ),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.15)
+                      : Colors.black.withOpacity(0.08),
+                  width: 1,
+                ),
+              ),
+              child: Icon(Icons.currency_rupee_rounded,color: Theme.of(context).colorScheme.onPrimary,size: 25,),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildCompactBalanceItem(BuildContext context, String label, String amount, IconData icon, Color color) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: 14),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              context,
+              'Add Income',
+              Icons.add,
+              Colors.green,
+                  () => _navigateToAddTransaction(context, false),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildActionButton(
+              context,
+              'Add Expense',
+              Icons.remove,
+              Colors.red,
+                  () => _navigateToAddTransaction(context, true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.2),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.transparent : Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(icon, color: color, size: 14),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 64,
+            color: isDark ? Colors.white30 : Colors.grey,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No transactions yet',
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your first transaction to get started',
+            style: TextStyle(
+              color: isDark ? Colors.white38 : Colors.black38,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionsList(BuildContext context, Map<String, List<TransactionModel>> grouped, List<String> sortedKeys) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: sortedKeys.length,
+      itemBuilder: (context, idx) {
+        final dateKey = sortedKeys[idx];
+        final txList = grouped[dateKey]!;
+        final dailyIncome = txList.where((tx) => !tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
+        final dailyExpenses = txList.where((tx) => tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses),
+            const SizedBox(height: 8),
+            ...txList.map((tx) => _ModernTransactionCard(
+              tx: tx,
+              onDelete: () => _showDeleteDialog(context, tx),
+            )),
+            const SizedBox(height: 16),
+          ],
         );
       },
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Expense Tracker')),
-      body: Obx(() {
-        final txs = controller.transactions;
-        final totalSpend = txs
-            .where((e) => e.isExpense)
-            .fold(0.0, (sum, e) => sum + e.amount);
+  Widget _buildDateHeader(BuildContext context, String dateKey, double income, double expenses) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-        return Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Colors.red,
-              child: Text(
-                'Total Spend: ₹${totalSpend.toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.white, fontSize: 24),
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _getDateLabel(dateKey),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: isDark ? Colors.white : Colors.black87,
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: txs.length,
-                itemBuilder: (_, index) {
-                  final tx = txs[index];
-                  return ListTile(
-                    leading: Icon(
-                      tx.isExpense ? Icons.arrow_downward : Icons.arrow_upward,
-                      color: tx.isExpense ? Colors.red : Colors.green,
-                    ),
-                    title: Text(tx.category),
-                    subtitle: Text(tx.description ?? 'No description'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '₹${tx.amount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color:
-                                tx.isExpense ? Colors.red : Colors.green,
-                              ),
-                            ),
-                            Text(
-                              tx.transactionDate.toLocal().toString().split(' ')[0],
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            // Show confirmation dialog
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: const Text('Delete Transaction'),
-                                  content: Text('Are you sure you want to delete this ${tx.isExpense ? 'expense' : 'income'} of ₹${tx.amount.toStringAsFixed(2)}?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        print('HomePage: Deleting transaction: ${tx.transactionId}');
-                                        controller.deleteTransaction(tx.transactionId!);
-                                      },
-                                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+          ),
+          Row(
+            children: [
+              if (income > 0) ...[
+                Text(
+                  '+₹${income.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (expenses > 0)
+                Text(
+                  '-₹${expenses.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, TransactionModel tx) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Delete Transaction'),
+          content: Text('Are you sure you want to delete this ${tx.isExpense ? 'expense' : 'income'} of ₹${tx.amount.toStringAsFixed(2)}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                controller.deleteTransaction(tx.transactionId!);
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
-      }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTransactionSheet(context),
-        child: const Icon(Icons.add),
+      },
+    );
+  }
+
+  Widget _buildModernFAB(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF667eea).withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _navigateToAddTransaction(context, true),
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernBottomNav(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomAppBar(
+        elevation: 0,
+        color: Colors.transparent,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _ModernBottomNavItem(
+                icon: Icons.dashboard_outlined,
+                label: 'Dashboard',
+                isActive: true,
+                onTap: () {},
+              ),
+              _ModernBottomNavItem(
+                icon: Icons.analytics_outlined,
+                label: 'Analytics',
+                isActive: false,
+                onTap: () {},
+              ),
+              const SizedBox(width: 40), // Space for FAB
+              _ModernBottomNavItem(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'Accounts',
+                isActive: false,
+                onTap: () {},
+              ),
+              _ModernBottomNavItem(
+                icon: Icons.settings_outlined,
+                label: 'Settings',
+                isActive: false,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToAddTransaction(BuildContext context, bool isExpense) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddTransactionPage(
+          currentUserId: currentUserId,
+          controller: controller,
+          initialIsExpense: isExpense,
+        ),
+      ),
+    );
+  }
+}
+
+// Keep the existing _ModernTransactionCard and _ModernBottomNavItem classes as they are
+class _ModernTransactionCard extends StatelessWidget {
+  final TransactionModel tx;
+  final VoidCallback onDelete;
+
+  const _ModernTransactionCard({
+    required this.tx,
+    required this.onDelete,
+  });
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Icons.restaurant;
+      case 'transport':
+        return Icons.directions_car;
+      case 'shopping':
+        return Icons.shopping_bag;
+      case 'entertainment':
+        return Icons.movie;
+      case 'health':
+        return Icons.local_hospital;
+      case 'education':
+        return Icons.school;
+      case 'salary':
+        return Icons.account_balance_wallet;
+      case 'gift':
+        return Icons.card_giftcard;
+      default:
+        return Icons.category;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2),
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: tx.isExpense
+                ? Colors.red.withOpacity(0.1)
+                : Colors.green.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            _getCategoryIcon(tx.category),
+            color: tx.isExpense ? Colors.red : Colors.green,
+            size: 24,
+          ),
+        ),
+        title: Text(
+          tx.category,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          tx.description ?? 'No description',
+          style: TextStyle(
+            color: isDark ? Colors.white60 : Colors.black54,
+            fontSize: 14,
+          ),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${tx.isExpense ? '-' : '+'}₹${tx.amount.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: tx.isExpense ? Colors.red : Colors.green,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('hh:mm a').format(tx.transactionDate),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+            ),
+          ],
+        ),
+        onLongPress: onDelete,
+      ),
+    );
+  }
+}
+
+class _ModernBottomNavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _ModernBottomNavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive
+                ? const Color(0xFF667eea)
+                : isDark ? Colors.white38 : Colors.black38,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive
+                  ? const Color(0xFF667eea)
+                  : isDark ? Colors.white38 : Colors.black38,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }
