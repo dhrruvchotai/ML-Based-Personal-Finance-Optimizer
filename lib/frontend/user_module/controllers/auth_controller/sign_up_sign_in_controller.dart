@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/services/auth_services.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 
 import '../../models/auth_model.dart';
@@ -7,6 +8,7 @@ import '../../models/auth_model.dart';
 class SignUpSignInController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  AuthService _authService = AuthService();
 
   var isLoading = false.obs;
   var isPasswordVisible = false.obs;
@@ -36,13 +38,14 @@ class SignUpSignInController extends GetxController {
     return null;
   }
 
-  void signUp(GlobalKey<FormState> formKey) async {
+  void signUpUsingEmail(GlobalKey<FormState> formKey) async {
     final SignUpSignInController controller = Get.find<SignUpSignInController>();
     if (!formKey.currentState!.validate()) return;
     isLoading.value = true;
     final user = await authModel.signUpWithEmail(emailController.text, passwordController.text);
     if(user != null){
       //this need to be managed before push
+      await _authService.addUser(userName: user.displayName, email: user.email);
       Get.off(HomePage());
 
       Get.snackbar(
@@ -74,7 +77,6 @@ class SignUpSignInController extends GetxController {
     isLoading.value = true;
     final user = await authModel.loginWithEmail(emailController.text, passwordController.text);
     if(user != null){
-
       //this need to be managed before push
       Get.off(HomePage());
 
@@ -104,11 +106,12 @@ class SignUpSignInController extends GetxController {
     isLoading.value = false;
   }
 
-  void googleSignUp() async {
+  void loginUsingGoogle() async {
     isLoading.value = true;
     final user = await authModel.loginWithGoogle();
     if(user != null){
-
+      print("=====================Google Login User : ");
+      print(user.user);
       //this need to be managed before push
       Get.off(HomePage());
       Get.snackbar(
