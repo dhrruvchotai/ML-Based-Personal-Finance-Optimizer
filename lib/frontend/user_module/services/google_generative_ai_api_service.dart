@@ -1,16 +1,26 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleGenerativeAiApiService {
   //API
   final String? Google_GenerativeAI_API_Key =
       dotenv.env['GOOGLE_GENERATIVE_AI_API_KEY'];
+  String? userId;
+
 
   GoogleGenerativeAiApiService() {
     if (Google_GenerativeAI_API_Key == null ||
         Google_GenerativeAI_API_Key!.isEmpty) {
       throw Exception("API Key is missing or invalid.");
     }
+    getUserId();
+  }
+
+  Future<String? > getUserId() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString("userId");
+    print("userId: $userId");
   }
 
   Future<String> getResponseForGivenPrompt(String prompt) async {
