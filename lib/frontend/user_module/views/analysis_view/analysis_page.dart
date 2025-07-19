@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/analysis_controller.dart';
+import '../transactionPage.dart';
 
 class AnalysisPage extends StatelessWidget {
   final AnalysisController controller = Get.put(AnalysisController());
@@ -23,6 +26,13 @@ class AnalysisPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
+        ),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).colorScheme.onBackground,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         elevation: 0,
         centerTitle: true,
@@ -95,28 +105,33 @@ class AnalysisPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+
+              _buildSummaryCards(context),
+              const SizedBox(height: 32),
+              _buildPieChartsSection(context),
               // Download Report Button
+              const SizedBox(height: 12),
               Container(
                 margin: const EdgeInsets.only(bottom: 24),
                 child: ElevatedButton.icon(
-                  onPressed: controller.isGeneratingPdf.value 
-                    ? null 
-                    : controller.generatePdfReport,
+                  onPressed: controller.isGeneratingPdf.value
+                      ? null
+                      : controller.generatePdfReport,
                   icon: controller.isGeneratingPdf.value
-                    ? Container(
-                        width: 20,
-                        height: 20,
-                        margin: const EdgeInsets.only(right: 8),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.download_rounded),
+                      ? Container(
+                    width: 20,
+                    height: 20,
+                    margin: const EdgeInsets.only(right: 8),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                      : const Icon(Icons.download_rounded),
                   label: Text(
                     controller.isGeneratingPdf.value
-                      ? 'Generating PDF...'
-                      : 'Download Financial Report',
+                        ? 'Generating PDF...'
+                        : 'Download Financial Report',
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
@@ -128,15 +143,105 @@ class AnalysisPage extends StatelessWidget {
                   ),
                 ),
               ),
-              _buildSummaryCards(context),
-              const SizedBox(height: 32),
-              _buildPieChartsSection(context),
+
             ],
           ),
         );
       }),
+      bottomNavigationBar: _buildModernBottomNav(context),
     );
   }
+
+  Widget _buildModernBottomNav(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          height: 80, // Increased height to prevent overflow
+          decoration: BoxDecoration(
+            color: isDark
+                ? theme.colorScheme.surface.withOpacity(0.7)
+                : Colors.white.withOpacity(0.8),
+            border: Border(
+              top: BorderSide(
+                color: theme.colorScheme.outline.withOpacity(0.3),
+                width: 0.5,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: BottomAppBar(
+            elevation: 0,
+            color: Colors.transparent,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 12,
+            height: 90, // Match container height
+            padding: EdgeInsets.zero, // Remove default padding
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _ModernBottomNavItem(
+                    icon: Icons.dashboard_outlined,
+                    activeIcon: Icons.dashboard_rounded,
+                    label: 'Dashboard',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {
+                      Get.toNamed('/homePage');
+                    },
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.analytics_outlined,
+                    activeIcon: Icons.analytics_rounded,
+                    label: 'Analytics',
+                    isActive: true,
+                    theme: theme,
+                    onTap: () {
+                      Get.toNamed('/analysis');
+                    },
+                  ), // Space for FAB
+                  _ModernBottomNavItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    activeIcon: Icons.account_balance_wallet_rounded,
+                    label: 'Accounts',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {
+                      Get.toNamed('/analysis');
+                    },
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.settings_outlined,
+                    activeIcon: Icons.settings_rounded,
+                    label: 'Settings',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {
+                      Get.toNamed('/user-profile');
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildSummaryCards(BuildContext context) {
     final cards = [
@@ -144,7 +249,7 @@ class AnalysisPage extends StatelessWidget {
         context,
         'Total Income',
         controller.totalIncome,
-        Theme.of(context).colorScheme.primaryContainer,
+        Color(0xFF81C784),
         Icons.trending_up,
         Theme.of(context).colorScheme.onPrimaryContainer,
       ),
@@ -152,7 +257,7 @@ class AnalysisPage extends StatelessWidget {
         context,
         'Total Expenses',
         controller.totalExpenses,
-        Theme.of(context).colorScheme.errorContainer,
+        Color(0xFFE57373),
         Icons.trending_down,
         Theme.of(context).colorScheme.onErrorContainer,
       ),
@@ -161,7 +266,7 @@ class AnalysisPage extends StatelessWidget {
         'Net Amount',
         controller.netAmount,
         controller.netAmount >= 0
-            ? Theme.of(context).colorScheme.secondaryContainer
+            ?  Color(0xFF64B5F6)
             : Theme.of(context).colorScheme.tertiaryContainer,
         controller.netAmount >= 0 ? Icons.account_balance : Icons.warning,
         controller.netAmount >= 0
@@ -190,7 +295,7 @@ class AnalysisPage extends StatelessWidget {
       Color iconTextColor,
       ) {
     return Card(
-      elevation: 3,
+      elevation: 1,
       margin: const EdgeInsets.symmetric(vertical: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: color,
@@ -391,7 +496,7 @@ class AnalysisPage extends StatelessWidget {
   Widget _buildEmptyChart(BuildContext context, String title) {
     final theme = Theme.of(context);
     return Container(
-      height: 180,
+      height: 190,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceVariant,
@@ -419,6 +524,82 @@ class AnalysisPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ModernBottomNavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData? activeIcon;
+  final String label;
+  final bool isActive;
+  final ThemeData theme;
+  final VoidCallback onTap;
+
+  const _ModernBottomNavItem({
+    required this.icon,
+    this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.theme,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Using your app theme colors
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.colorScheme.onSurface.withOpacity(0.6);
+    final backgroundColor = isActive
+        ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+        : Colors.transparent;
+    final borderColor = isActive
+        ? theme.colorScheme.primary.withOpacity(0.4)
+        : Colors.transparent;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(
+              horizontal: 2), // Small margin to prevent overflow
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: borderColor,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isActive ? (activeIcon ?? icon) : icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 22, // Slightly smaller to prevent overflow
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10, // Smaller font size to prevent overflow
+                  color: isActive ? activeColor : inactiveColor,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis, // Prevent text overflow
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
