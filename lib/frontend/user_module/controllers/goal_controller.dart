@@ -162,11 +162,13 @@ class GoalController extends GetxController {
       
       await _goalService.addGoal(newGoal);
       await transactionController.addTransaction(TransactionModel(userId: userId.value, amount: targetAmount, isExpense: true, transactionDate: DateTime.now(), category: 'Goal',description: descriptionController.text));
-
       clearForm();
+      await fetchGoals(); // Refresh the goals list
       Get.back(); // Close the add goal dialog/screen
-      fetchGoals(); // Refresh the goals list
       
+      // Ensure HomePage refreshes by calling fetchTransactions on the controller
+      await transactionController.fetchTransactions(userId.value);
+
       Get.snackbar(
         'Success',
         'Goal added successfully',
@@ -365,6 +367,10 @@ class GoalController extends GetxController {
       fetchGoals(); // Refresh the goals list
       fetchTransactions(); // Update available balance
       
+      // Ensure HomePage refreshes by calling fetchTransactions on the TransactionController
+      final transactionController = Get.find<TransactionController>();
+      await transactionController.fetchTransactions(userId.value);
+      
       Get.snackbar(
         'Success',
         'Deposit successful',
@@ -417,6 +423,10 @@ class GoalController extends GetxController {
       withdrawAmountController.clear();
       fetchGoals(); // Refresh the goals list
       fetchTransactions(); // Update available balance
+      
+      // Ensure HomePage refreshes by calling fetchTransactions on the TransactionController
+      final transactionController = Get.find<TransactionController>();
+      await transactionController.fetchTransactions(userId.value);
       
       Get.snackbar(
         'Success',
