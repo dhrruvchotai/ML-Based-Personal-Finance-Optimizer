@@ -169,6 +169,7 @@ class TransactionController extends GetxController{
       if(success){
         print('TransactionController: Adding transaction to local list');
         transactions.add(txn);
+        await fetchTransactions(txn.userId);
         print('TransactionController: Transaction added successfully. Total transactions: ${transactions.length}');
       }else{
         print('TransactionController: Failed to add transaction');
