@@ -36,34 +36,55 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   String _responseText = '';
   bool _isUploading = false;
 
-  final List<String> _categories = [
-    'Food & Dining',
-    'Transportation',
-    'Shopping',
-    'Entertainment',
-    'Bills & Utilities',
-    'Health & Fitness',
-    'Education',
-    'Travel',
-    'Salary',
-    'Business',
-    'Gifts',
-    'Other',
+  // CATEGORIES:
+  // for income->allowance, award, bonus, dividend, investment, lottery, salary, tips, others
+  // for expense-> bills, clothing, education, entertainment, fitness, food, gifts, healthcare, home & furniture, pets, shopping, transportation & fuel, travel, other
+
+  final List<String> _categoriesIncome = [
+    'allowance',
+    'award',
+    'bonus',
+    'dividend',
+    'investment',
+    'lottery',
+    'salary',
+    'tips',
+    'others'
   ];
 
-  final List<IconData> _categoryIcons = [
-    Icons.restaurant,
-    Icons.directions_car,
-    Icons.shopping_bag,
-    Icons.movie,
-    Icons.receipt_long,
-    Icons.fitness_center,
-    Icons.school,
-    Icons.flight,
-    Icons.account_balance_wallet,
-    Icons.business,
-    Icons.card_giftcard,
-    Icons.category,
+  final List<String> _categoriesExpense = [
+    'bills', 'clothing', 'education', 'entertainment', 'fitness', 'food',
+    'gifts', 'healthcare', 'home & furniture', 'pets', 'shopping',
+    'transportation & fuel', 'travel', 'other'
+  ];
+
+  final List<IconData> _categoryIconsIncome = [
+    Icons.wallet_giftcard,           // allowance
+    Icons.emoji_events,              // award
+    Icons.card_giftcard,             // bonus
+    Icons.stacked_line_chart,        // dividend
+    Icons.trending_up,               // investment
+    Icons.casino,                    // lottery
+    Icons.account_balance_wallet,    // salary
+    Icons.attach_money,              // tips
+    Icons.more_horiz,                // others
+  ];
+
+  final List<IconData> _categoryIconsExpense = [
+    Icons.receipt_long,           // bills
+    Icons.checkroom,              // clothing
+    Icons.school,                 // education
+    Icons.movie,                  // entertainment
+    Icons.fitness_center,         // fitness
+    Icons.fastfood,               // food
+    Icons.card_giftcard,          // gifts
+    Icons.local_hospital,         // healthcare
+    Icons.chair_alt,              // home & furniture
+    Icons.pets,                   // pets
+    Icons.shopping_bag,           // shopping
+    Icons.directions_car,         // transportation & fuel
+    Icons.flight,                 // travel
+    Icons.more_horiz,             // other
   ];
 
   @override
@@ -123,7 +144,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           _parseReceiptData(response.body);
         } else {
           _responseText =
-              'Upload failed (status ${response.statusCode}): ${response.body}';
+          'Upload failed (status ${response.statusCode}): ${response.body}';
         }
       });
     } catch (e) {
@@ -159,12 +180,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
       if (jsonData['category'] != null) {
         String category = jsonData['category'];
-        // Try to match with existing categories
-        String matchedCategory = _categories.firstWhere(
-          (cat) =>
-              cat.toLowerCase().contains(category.toLowerCase()) ||
+        // Try to match with existing expense categories (since receipts are usually expenses)
+        String matchedCategory = _categoriesExpense.firstWhere(
+              (cat) =>
+          cat.toLowerCase().contains(category.toLowerCase()) ||
               category.toLowerCase().contains(cat.toLowerCase()),
-          orElse: () => 'Other',
+          orElse: () => 'other',
         );
         _categoryController.text = matchedCategory;
       }
@@ -182,6 +203,22 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       print('Error parsing receipt data: $e');
     }
   }
+
+  void _onTransactionTypeChanged(bool isExpense) {
+    // Store current category if it exists in the new list
+    String currentCategory = _categoryController.text;
+
+    _isExpense.value = isExpense;
+
+    // Check if current category exists in the new category list
+    List<String> newCategories = isExpense ? _categoriesExpense : _categoriesIncome;
+
+    if (!newCategories.contains(currentCategory)) {
+      // Clear category if it doesn't exist in the new list
+      _categoryController.text = '';
+    }
+  }
+
 
   void _showImageSourceOptions() {
     showModalBottomSheet(
@@ -213,12 +250,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   _buildImageSourceOption(
                     'Camera',
                     Icons.camera_alt,
-                    () => _pickImage(ImageSource.camera),
+                        () => _pickImage(ImageSource.camera),
                   ),
                   _buildImageSourceOption(
                     'Gallery',
                     Icons.photo_library,
-                    () => _pickImage(ImageSource.gallery),
+                        () => _pickImage(ImageSource.gallery),
                   ),
                 ],
               ),
@@ -250,7 +287,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         ),
         child: Column(
           children: [
-            Icon(icon, size: 40, color: const Color(0xFF667eea)),
+            Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 8),
             Text(
               label,
@@ -295,7 +332,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
     return Scaffold(
       backgroundColor:
-          isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -345,10 +382,10 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       actions: [
         TextButton(
           onPressed: _submitTransaction,
-          child: const Text(
+          child: Text(
             'Save',
             style: TextStyle(
-              color: Color(0xFF667eea),
+              color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -372,7 +409,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: const Color(0xFF667eea),
+          color: Theme.of(context).colorScheme.primary,
           borderRadius: BorderRadius.circular(12),
         ),
         labelColor: Colors.white,
@@ -398,15 +435,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           end: Alignment.bottomRight,
           colors: isDark
               ? [
-                  const Color(0xFF1A1A1A),
-                  const Color(0xFF2A2A2A),
-                  const Color(0xFF1A1A1A),
-                ]
+            const Color(0xFF1A1A1A),
+            const Color(0xFF2A2A2A),
+            const Color(0xFF1A1A1A),
+          ]
               : [
-                  const Color(0xFFF8FAFC),
-                  const Color(0xFFE2E8F0),
-                  const Color(0xFFF8FAFC),
-                ],
+            const Color(0xFFF8FAFC),
+            const Color(0xFFE2E8F0),
+            const Color(0xFFF8FAFC),
+          ],
         ),
       ),
       child: Form(
@@ -423,102 +460,102 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   children: [
                     Expanded(
                       child: Obx(() => GestureDetector(
-                            onTap: () => _isExpense.value = true,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 8),
-                              decoration: BoxDecoration(
+                        onTap: () => _onTransactionTypeChanged(true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: _isExpense.value
+                                ? Colors.red.withOpacity(0.1)
+                                : (isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _isExpense.value
+                                  ? Colors.red
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.remove_circle,
                                 color: _isExpense.value
-                                    ? Colors.red.withOpacity(0.1)
-                                    : (isDark
-                                        ? Colors.white.withOpacity(0.1)
-                                        : Colors.grey.withOpacity(0.1)),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _isExpense.value
-                                      ? Colors.red
-                                      : Colors.transparent,
-                                  width: 2,
-                                ),
+                                    ? Colors.red
+                                    : Colors.grey,
+                                size: 20,
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.remove_circle,
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Expense',
+                                  style: TextStyle(
                                     color: _isExpense.value
                                         ? Colors.red
                                         : Colors.grey,
-                                    size: 20,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      'Expense',
-                                      style: TextStyle(
-                                        color: _isExpense.value
-                                            ? Colors.red
-                                            : Colors.grey,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          )),
+                            ],
+                          ),
+                        ),
+                      )),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Obx(() => GestureDetector(
-                            onTap: () => _isExpense.value = false,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 8),
-                              decoration: BoxDecoration(
+                        onTap: () => _onTransactionTypeChanged(false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: !_isExpense.value
+                                ? Colors.green.withOpacity(0.1)
+                                : (isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: !_isExpense.value
+                                  ? Colors.green
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_circle,
                                 color: !_isExpense.value
-                                    ? Colors.green.withOpacity(0.1)
-                                    : (isDark
-                                        ? Colors.white.withOpacity(0.1)
-                                        : Colors.grey.withOpacity(0.1)),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: !_isExpense.value
-                                      ? Colors.green
-                                      : Colors.transparent,
-                                  width: 2,
-                                ),
+                                    ? Colors.green
+                                    : Colors.grey,
+                                size: 20,
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add_circle,
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Income',
+                                  style: TextStyle(
                                     color: !_isExpense.value
                                         ? Colors.green
                                         : Colors.grey,
-                                    size: 20,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      'Income',
-                                      style: TextStyle(
-                                        color: !_isExpense.value
-                                            ? Colors.green
-                                            : Colors.grey,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          )),
+                            ],
+                          ),
+                        ),
+                      )),
                     ),
                   ],
                 ),
@@ -608,7 +645,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                           Icon(
                             Icons.calendar_today,
                             size: 18,
-                            color: const Color(0xFF667eea),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -633,10 +670,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                       ),
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
+                    Obx(() => DropdownButtonFormField<String>(
+                      key: ValueKey('category_${_isExpense.value}'), // Add this key
                       value: _categoryController.text.isEmpty
                           ? null
-                          : _categoryController.text,
+                          : (_isExpense.value ? _categoriesExpense : _categoriesIncome)
+                          .contains(_categoryController.text)
+                          ? _categoryController.text
+                          : null, // Only set value if it exists in current list
                       decoration: InputDecoration(
                         hintText: 'Select category',
                         filled: true,
@@ -649,12 +690,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                         ),
                         contentPadding: const EdgeInsets.all(12),
                       ),
-                      dropdownColor:
-                          isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black87,
                       ),
-                      items: _categories.asMap().entries.map((entry) {
+                      items: (_isExpense.value ? _categoriesExpense : _categoriesIncome)
+                          .asMap()
+                          .entries
+                          .map((entry) {
                         int index = entry.key;
                         String category = entry.value;
                         return DropdownMenuItem<String>(
@@ -662,12 +705,19 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                           child: Row(
                             children: [
                               Icon(
-                                _categoryIcons[index],
+                                (_isExpense.value
+                                    ? _categoryIconsExpense[index]
+                                    : _categoryIconsIncome[index]),
                                 size: 18,
-                                color: const Color(0xFF667eea),
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
-                              Text(category),
+                              Text(
+                                category,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         );
@@ -681,7 +731,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                         }
                         return null;
                       },
-                    ),
+                    )),
+
                   ],
                 ),
               ),
@@ -730,7 +781,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                 child: ElevatedButton(
                   onPressed: _submitTransaction,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF667eea),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -765,15 +816,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           end: Alignment.bottomRight,
           colors: isDark
               ? [
-                  const Color(0xFF1A1A1A),
-                  const Color(0xFF2A2A2A),
-                  const Color(0xFF1A1A1A),
-                ]
+            const Color(0xFF1A1A1A),
+            const Color(0xFF2A2A2A),
+            const Color(0xFF1A1A1A),
+          ]
               : [
-                  const Color(0xFFF8FAFC),
-                  const Color(0xFFE2E8F0),
-                  const Color(0xFFF8FAFC),
-                ],
+            const Color(0xFFF8FAFC),
+            const Color(0xFFE2E8F0),
+            const Color(0xFFF8FAFC),
+          ],
         ),
       ),
       child: Padding(
@@ -818,40 +869,40 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               ),
               child: _selectedImage != null
                   ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(_selectedImage!.path),
-                        fit: BoxFit.cover,
-                      ),
-                    )
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(_selectedImage!.path),
+                  fit: BoxFit.cover,
+                ),
+              )
                   : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long,
-                          size: 60,
-                          color: isDark ? Colors.white54 : Colors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No receipt image selected',
-                          style: TextStyle(
-                            color: isDark ? Colors.white54 : Colors.grey,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Upload a receipt to auto-fill transaction details',
-                          style: TextStyle(
-                            color:
-                                isDark ? Colors.white38 : Colors.grey.shade400,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    size: 60,
+                    color: isDark ? Colors.white54 : Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No receipt image selected',
+                    style: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.grey,
+                      fontSize: 16,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Upload a receipt to auto-fill transaction details',
+                    style: TextStyle(
+                      color:
+                      isDark ? Colors.white38 : Colors.grey.shade400,
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -862,22 +913,22 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                 onPressed: _isUploading ? null : _showImageSourceOptions,
                 icon: _isUploading
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                    AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
                     : const Icon(Icons.add_a_photo),
                 label: Text(_isUploading
                     ? 'Processing...'
                     : (_selectedImage != null
-                        ? 'Change Receipt'
-                        : 'Scan Receipt')),
+                    ? 'Change Receipt'
+                    : 'Scan Receipt')),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF667eea),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

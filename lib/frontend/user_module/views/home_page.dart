@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TransactionController controller = Get.put(TransactionController());
+  TransactionController controller = Get.find<TransactionController>();
   String? currentUserId;
 
 
@@ -166,7 +166,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             content: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Date Filter
@@ -216,32 +216,60 @@ class _HomePageState extends State<HomePage> {
                         )),
               ],
             ),
+
             actions: [
-              TextButton(
-                onPressed: () {
-                  Get.back();
-                  controller.clearFilters();
-                },
-                child: const Text('Clear All'),
-              ),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Get.back();
-                  controller.applyFilters();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        ElevatedButton(
+                          
+                          onPressed: () {
+                            Get.back();
+                            controller.clearFilters();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(1)
+                          ),
+                          child: const Text('Clear All'),
+                        ),
+                        SizedBox(height: 4,),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(1)
+                          ),
+                          onPressed: () => Get.back(),
+                          child: const Text('Cancel'),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Container(
+                        width: double.infinity,
+                        child: ElevatedButton(
+
+                          onPressed: () {
+                            Get.back();
+                            controller.applyFilters();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Apply Filters'),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Text('Apply Filters'),
-              ),
+              )
+
             ],
           );
         },
@@ -1121,7 +1149,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF667eea).withOpacity(0.2),
+            color:  Theme.of(context).colorScheme.primary.withOpacity(0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
