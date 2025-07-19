@@ -127,4 +127,31 @@ class GoalService {
       throw Exception('Error making withdrawal: $e');
     }
   }
+
+  // Edit an existing goal
+  Future<Goal> editGoal(Goal goal) async {
+    try {
+      print("GoalService: Updating goal with ID: ${goal.id}");
+      print("GoalService: Request body: ${json.encode(goal.toJson())}");
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/goals/updateGoal/${goal.id}'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(goal.toJson()),
+      );
+
+      print("GoalService: Response status: ${response.statusCode}");
+      print("GoalService: Response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final dynamic data = json.decode(response.body);
+        return Goal.fromJson(data);
+      } else {
+        throw Exception('Failed to update goal: HTTP ${response.statusCode}, Body: ${response.body}');
+      }
+    } catch (e) {
+      print("GoalService: Error updating goal: $e");
+      throw Exception('Error updating goal: $e');
+    }
+  }
 } 

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../controllers/goal_controller.dart';
 import '../../models/goal_model.dart';
+import 'edit_goal_page.dart';
 
 class GoalDetailPage extends StatelessWidget {
   final Goal goal;
@@ -33,6 +34,10 @@ class GoalDetailPage extends StatelessWidget {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => Get.to(() => EditGoalPage(goal: goal)),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             onPressed: () => _showDeleteConfirmation(context),
@@ -557,8 +562,20 @@ class GoalDetailPage extends StatelessWidget {
                   
                   final amount = double.tryParse(amountText);
                   if (amount != null && amount > 0) {
-                    controller.depositToGoal(goal.id!, amount);
-                    Navigator.pop(context);
+                    final validationError = controller.validateDepositAmount(amountText);
+                    if (validationError == null) {
+                      controller.depositToGoal(goal.id!, amount);
+                      Navigator.pop(context);
+                    } else {
+                      // Show error without closing dialog
+                      Get.snackbar(
+                        'Validation Error',
+                        validationError,
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red,
+                        colorText: Colors.white,
+                      );
+                    }
                   }
                 },
                 child: const Text('Deposit'),
@@ -618,8 +635,24 @@ class GoalDetailPage extends StatelessWidget {
                   
                   final amount = double.tryParse(amountText);
                   if (amount != null && amount > 0) {
-                    controller.withdrawFromGoal(goal.id!, amount);
-                    Navigator.pop(context);
+                    final validationError = controller.validateWithdrawalAmount(
+                      amountText, 
+                      goal.currentAmount
+                    );
+                    
+                    if (validationError == null) {
+                      controller.withdrawFromGoal(goal.id!, amount, goal.currentAmount);
+                      Navigator.pop(context);
+                    } else {
+                      // Show error without closing dialog
+                      Get.snackbar(
+                        'Validation Error',
+                        validationError,
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red,
+                        colorText: Colors.white,
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
