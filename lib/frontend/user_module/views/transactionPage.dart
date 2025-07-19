@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class AddTransactionPage extends StatefulWidget {
   final String currentUserId;
@@ -31,6 +33,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   final RxBool _isExpense = true.obs;
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
+  String _responseText = '';
+  bool _isUploading = false;
 
   final List<String> _categories = [
     'Food & Dining',
@@ -80,14 +84,102 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(source: source);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 75, // compress image slightly
+      );
       if (image != null) {
         setState(() {
           _selectedImage = image;
+          _responseText = '';
         });
+        // Call receipt extraction after picking image
+        await _uploadImage(File(image.path));
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _uploadImage(File imageFile) async {
+    setState(() {
+      _isUploading = true;
+      _responseText = 'Processing receipt...';
+    });
+
+    final uri = Uri.parse('https://test-api-udkm.onrender.com/extract-receipt');
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      setState(() {
+        _isUploading = false;
+        if (response.statusCode == 200) {
+          _responseText = _prettyJson(response.body);
+          // Parse and populate form fields
+          _parseReceiptData(response.body);
+        } else {
+          _responseText =
+              'Upload failed (status ${response.statusCode}): ${response.body}';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isUploading = false;
+        _responseText = 'Error: $e';
+      });
+    }
+  }
+
+  String _prettyJson(String rawJson) {
+    try {
+      final jsonObj = json.decode(rawJson);
+      const encoder = JsonEncoder.withIndent('  ');
+      return encoder.convert(jsonObj);
+    } catch (_) {
+      return rawJson;
+    }
+  }
+
+  void _parseReceiptData(String responseBody) {
+    try {
+      final jsonData = json.decode(responseBody);
+
+      // Extract data and populate form fields
+      if (jsonData['amount'] != null) {
+        _amountController.text = jsonData['amount'].toString();
+      }
+
+      if (jsonData['description'] != null) {
+        _descriptionController.text = jsonData['description'];
+      }
+
+      if (jsonData['category'] != null) {
+        String category = jsonData['category'];
+        // Try to match with existing categories
+        String matchedCategory = _categories.firstWhere(
+          (cat) =>
+              cat.toLowerCase().contains(category.toLowerCase()) ||
+              category.toLowerCase().contains(cat.toLowerCase()),
+          orElse: () => 'Other',
+        );
+        _categoryController.text = matchedCategory;
+      }
+
+      // Auto-set as expense (since it's from a receipt)
+      _isExpense.value = true;
+
+      Get.snackbar(
+        'Success',
+        'Receipt processed successfully!',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print('Error parsing receipt data: $e');
     }
   }
 
@@ -121,12 +213,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   _buildImageSourceOption(
                     'Camera',
                     Icons.camera_alt,
-                        () => _pickImage(ImageSource.camera),
+                    () => _pickImage(ImageSource.camera),
                   ),
                   _buildImageSourceOption(
                     'Gallery',
                     Icons.photo_library,
-                        () => _pickImage(ImageSource.gallery),
+                    () => _pickImage(ImageSource.gallery),
                   ),
                 ],
               ),
@@ -138,7 +230,8 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     );
   }
 
-  Widget _buildImageSourceOption(String label, IconData icon, VoidCallback onTap) {
+  Widget _buildImageSourceOption(
+      String label, IconData icon, VoidCallback onTap) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -150,7 +243,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -199,40 +294,32 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      backgroundColor:
+          isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: _buildAppBar(),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-              const Color(0xFF1A1A1A),
-              const Color(0xFF2A2A2A),
-              const Color(0xFF1A1A1A),
-            ]
-                : [
-              const Color(0xFFF8FAFC),
-              const Color(0xFFE2E8F0),
-              const Color(0xFFF8FAFC),
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            _buildTabBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildTransactionForm(),
-                  _buildImageTab(),
-                ],
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Expanded(
+                child: Column(
+                  children: [
+                    _buildTabBar(),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildTransactionForm(),
+                          _buildImageTab(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -281,7 +368,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+        color: isDark
+            ? Colors.white.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: TabBar(
@@ -313,15 +402,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           end: Alignment.bottomRight,
           colors: isDark
               ? [
-            const Color(0xFF1A1A1A),
-            const Color(0xFF2A2A2A),
-            const Color(0xFF1A1A1A),
-          ]
+                  const Color(0xFF1A1A1A),
+                  const Color(0xFF2A2A2A),
+                  const Color(0xFF1A1A1A),
+                ]
               : [
-            const Color(0xFFF8FAFC),
-            const Color(0xFFE2E8F0),
-            const Color(0xFFF8FAFC),
-          ],
+                  const Color(0xFFF8FAFC),
+                  const Color(0xFFE2E8F0),
+                  const Color(0xFFF8FAFC),
+                ],
         ),
       ),
       child: Form(
@@ -338,84 +427,102 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   children: [
                     Expanded(
                       child: Obx(() => GestureDetector(
-                        onTap: () => _isExpense.value = true,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: _isExpense.value
-                                ? Colors.red.withOpacity(0.1)
-                                : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _isExpense.value ? Colors.red : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.remove_circle,
-                                color: _isExpense.value ? Colors.red : Colors.grey,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  'Expense',
-                                  style: TextStyle(
-                                    color: _isExpense.value ? Colors.red : Colors.grey,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                            onTap: () => _isExpense.value = true,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: _isExpense.value
+                                    ? Colors.red.withOpacity(0.1)
+                                    : (isDark
+                                        ? Colors.white.withOpacity(0.1)
+                                        : Colors.grey.withOpacity(0.1)),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _isExpense.value
+                                      ? Colors.red
+                                      : Colors.transparent,
+                                  width: 2,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      )),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.remove_circle,
+                                    color: _isExpense.value
+                                        ? Colors.red
+                                        : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      'Expense',
+                                      style: TextStyle(
+                                        color: _isExpense.value
+                                            ? Colors.red
+                                            : Colors.grey,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Obx(() => GestureDetector(
-                        onTap: () => _isExpense.value = false,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: !_isExpense.value
-                                ? Colors.green.withOpacity(0.1)
-                                : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: !_isExpense.value ? Colors.green : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_circle,
-                                color: !_isExpense.value ? Colors.green : Colors.grey,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  'Income',
-                                  style: TextStyle(
-                                    color: !_isExpense.value ? Colors.green : Colors.grey,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                            onTap: () => _isExpense.value = false,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: !_isExpense.value
+                                    ? Colors.green.withOpacity(0.1)
+                                    : (isDark
+                                        ? Colors.white.withOpacity(0.1)
+                                        : Colors.grey.withOpacity(0.1)),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: !_isExpense.value
+                                      ? Colors.green
+                                      : Colors.transparent,
+                                  width: 2,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      )),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_circle,
+                                    color: !_isExpense.value
+                                        ? Colors.green
+                                        : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      'Income',
+                                      style: TextStyle(
+                                        color: !_isExpense.value
+                                            ? Colors.green
+                                            : Colors.grey,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )),
                     ),
                   ],
                 ),
@@ -438,7 +545,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   hintText: '0.00',
                   prefixText: '₹ ',
                   filled: true,
-                  fillColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                  fillColor: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -466,10 +575,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2),
+                    color: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.2),
                   ),
                 ),
                 child: Column(
@@ -489,7 +602,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                        color: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -523,18 +638,23 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _categoryController.text.isEmpty ? null : _categoryController.text,
+                      value: _categoryController.text.isEmpty
+                          ? null
+                          : _categoryController.text,
                       decoration: InputDecoration(
                         hintText: 'Select category',
                         filled: true,
-                        fillColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                        fillColor: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.all(12),
                       ),
-                      dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                      dropdownColor:
+                          isDark ? const Color(0xFF2A2A2A) : Colors.white,
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black87,
                       ),
@@ -587,7 +707,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                 decoration: InputDecoration(
                   hintText: 'Add a note...',
                   filled: true,
-                  fillColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                  fillColor: isDark
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -647,15 +769,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           end: Alignment.bottomRight,
           colors: isDark
               ? [
-            const Color(0xFF1A1A1A),
-            const Color(0xFF2A2A2A),
-            const Color(0xFF1A1A1A),
-          ]
+                  const Color(0xFF1A1A1A),
+                  const Color(0xFF2A2A2A),
+                  const Color(0xFF1A1A1A),
+                ]
               : [
-            const Color(0xFFF8FAFC),
-            const Color(0xFFE2E8F0),
-            const Color(0xFFF8FAFC),
-          ],
+                  const Color(0xFFF8FAFC),
+                  const Color(0xFFE2E8F0),
+                  const Color(0xFFF8FAFC),
+                ],
         ),
       ),
       child: Padding(
@@ -664,11 +786,19 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Receipt Image',
+              'Receipt Scanner',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Take a photo or upload an image of your receipt to automatically extract transaction details',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white70 : Colors.black54,
               ),
             ),
             const SizedBox(height: 16),
@@ -678,40 +808,54 @@ class _AddTransactionPageState extends State<AddTransactionPage>
               width: double.infinity,
               height: 250,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                color: isDark
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isDark ? Colors.white.withOpacity(0.2) : Colors.grey.withOpacity(0.3),
+                  color: isDark
+                      ? Colors.white.withOpacity(0.2)
+                      : Colors.grey.withOpacity(0.3),
                   style: BorderStyle.solid,
                   width: 1,
                 ),
               ),
               child: _selectedImage != null
                   ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(_selectedImage!.path),
-                  fit: BoxFit.cover,
-                ),
-              )
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        File(_selectedImage!.path),
+                        fit: BoxFit.cover,
+                      ),
+                    )
                   : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.add_photo_alternate,
-                    size: 60,
-                    color: isDark ? Colors.white54 : Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No image selected',
-                    style: TextStyle(
-                      color: isDark ? Colors.white54 : Colors.grey,
-                      fontSize: 16,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long,
+                          size: 60,
+                          color: isDark ? Colors.white54 : Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No receipt image selected',
+                          style: TextStyle(
+                            color: isDark ? Colors.white54 : Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Upload a receipt to auto-fill transaction details',
+                          style: TextStyle(
+                            color:
+                                isDark ? Colors.white38 : Colors.grey.shade400,
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 20),
 
@@ -719,9 +863,23 @@ class _AddTransactionPageState extends State<AddTransactionPage>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _showImageSourceOptions,
-                icon: const Icon(Icons.add_a_photo),
-                label: Text(_selectedImage != null ? 'Change Image' : 'Add Image'),
+                onPressed: _isUploading ? null : _showImageSourceOptions,
+                icon: _isUploading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.add_a_photo),
+                label: Text(_isUploading
+                    ? 'Processing...'
+                    : (_selectedImage != null
+                        ? 'Change Receipt'
+                        : 'Scan Receipt')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF667eea),
                   foregroundColor: Colors.white,
@@ -741,6 +899,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   onPressed: () {
                     setState(() {
                       _selectedImage = null;
+                      _responseText = '';
                     });
                   },
                   icon: const Icon(Icons.delete),
@@ -751,6 +910,45 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            // Response Display
+            if (_responseText.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'Extraction Result:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.2),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _responseText,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : Colors.black87,
                     ),
                   ),
                 ),
