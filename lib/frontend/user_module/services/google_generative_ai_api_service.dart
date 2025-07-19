@@ -41,7 +41,7 @@ class GoogleGenerativeAiApiService {
             Always ask the user:
             1. What would they like help with (e.g., savings, expense summary, budget advice)?
             2. If relevant, the date range or category they’re interested in.
-
+            
             Be smart, helpful, and non-judgmental. Use the available data in the app to give meaningful suggestions.
         """;
 

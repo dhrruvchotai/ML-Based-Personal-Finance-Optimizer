@@ -1,8 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transactionPage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transactionPage.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
@@ -465,41 +466,82 @@ class _HomePageState extends State<HomePage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return PreferredSize(
-      preferredSize: const Size.fromHeight(80),
+      preferredSize: const Size.fromHeight(100),
       child: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: isDark
-                ? const Color(0xFF1A1A1A).withOpacity(0.3)
-                : Colors.white.withOpacity(0.3),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? theme.colorScheme.surface.withOpacity(0.8)
+                  : theme.colorScheme.surface.withOpacity(0.3),
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outline.withOpacity(0.3),
+                  width: 0.5,
+                ),
+              ),
+            ),
             child: AppBar(
               elevation: 0,
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
-              toolbarHeight: 80,
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'FinanceTracker',
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
+              toolbarHeight: 100,
+              title: Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'FinanceTracker',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 28,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  Text(
-                    DateFormat('MMMM yyyy').format(DateTime.now()),
-                    style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
+                    const SizedBox(height: 4),
+                    Text(
+                      DateFormat('MMMM yyyy').format(DateTime.now()),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 20, top: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outline.withOpacity(0.3),
+                          ),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.notifications_outlined,
+                            color: theme.colorScheme.onSurface,
+                            size: 24,
+                          ),
+                          onPressed: () {},
+                        ),
+                      ),
+                    )
+                  )
+                ),
                 Obx(() => Stack(
                       children: [
                         Container(
@@ -558,7 +600,9 @@ class _HomePageState extends State<HomePage> {
                       Icons.notifications_outlined,
                       color: isDark ? Colors.white : Colors.black54,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+
+                    },
                   ),
                 ),
               ],
@@ -1199,7 +1243,7 @@ class _HomePageState extends State<HomePage> {
                     label: 'Analytics',
                     isActive: false,
                     theme: theme,
-                    onTap: () => Get.toNamed('/analysis'),
+                    onTap: () {},
                   ),
                   const SizedBox(width: 48), // Space for FAB
                   _ModernBottomNavItem(
@@ -1241,7 +1285,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Keep the existing _ModernTransactionCard and _ModernBottomNavItem classes as they are
 class _ModernTransactionCard extends StatelessWidget {
   final TransactionModel tx;
   final VoidCallback onDelete;
@@ -1273,7 +1316,6 @@ class _ModernTransactionCard extends StatelessWidget {
         return Icons.category;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
