@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../controllers/goal_controller.dart';
 import 'add_goal_page.dart';
+import 'edit_goal_page.dart';
 import 'goal_detail_page.dart';
 
 class GoalsPage extends StatelessWidget {
@@ -152,7 +153,7 @@ class GoalsPage extends StatelessWidget {
                                 color: theme.colorScheme.primary,
                               ),
                               onPressed: () {
-                                // TODO: Implement edit goal functionality
+                                Get.to(() => EditGoalPage(goal: goal));
                               },
                             ),
                           ],
@@ -397,16 +398,28 @@ class GoalsPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  final amountText = controller.depositAmountController.text;
-                  if (amountText.isEmpty) return;
-                  
-                  final amount = double.tryParse(amountText);
-                  if (amount != null && amount > 0) {
-                    controller.depositToGoal(goalId, amount);
-                    Navigator.pop(context);
-                  }
-                },
+                                  onPressed: () {
+                    final amountText = controller.depositAmountController.text;
+                    if (amountText.isEmpty) return;
+                    
+                    final amount = double.tryParse(amountText);
+                    if (amount != null && amount > 0) {
+                      final validationError = controller.validateDepositAmount(amountText);
+                      if (validationError == null) {
+                        controller.depositToGoal(goalId, amount);
+                        Navigator.pop(context);
+                      } else {
+                        // Show error without closing dialog
+                        Get.snackbar(
+                          'Validation Error',
+                          validationError,
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red,
+                          colorText: Colors.white,
+                        );
+                      }
+                    }
+                  },
                 child: const Text('Deposit'),
               ),
               const SizedBox(height: 20),
@@ -458,16 +471,35 @@ class GoalsPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  final amountText = controller.withdrawAmountController.text;
-                  if (amountText.isEmpty) return;
-                  
-                  final amount = double.tryParse(amountText);
-                  if (amount != null && amount > 0) {
-                    controller.withdrawFromGoal(goalId, amount);
-                    Navigator.pop(context);
-                  }
-                },
+                                  onPressed: () {
+                    final amountText = controller.withdrawAmountController.text;
+                    if (amountText.isEmpty) return;
+                    
+                    // Find the current goal to get its current amount
+                    final goal = controller.goals.firstWhere((g) => g.id == goalId);
+                    
+                    final amount = double.tryParse(amountText);
+                    if (amount != null && amount > 0) {
+                      final validationError = controller.validateWithdrawalAmount(
+                        amountText, 
+                        goal.currentAmount
+                      );
+                      
+                      if (validationError == null) {
+                        controller.withdrawFromGoal(goalId, amount, goal.currentAmount);
+                        Navigator.pop(context);
+                      } else {
+                        // Show error without closing dialog
+                        Get.snackbar(
+                          'Validation Error',
+                          validationError,
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red,
+                          colorText: Colors.white,
+                        );
+                      }
+                    }
+                  },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                 ),
