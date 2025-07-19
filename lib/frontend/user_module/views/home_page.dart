@@ -7,6 +7,10 @@ import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/t
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'settings_view/user_profile_view.dart';
 
@@ -44,31 +48,98 @@ class _HomePageState extends State<HomePage> {
     } else {
       print("HomePage: WARNING - User ID not found in shared preferences.");
 
-      // If userId is not available, try to load it again after a short delay
+      // Try to check if user is actually logged in
+      final firebaseUser = await FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        print("HomePage: User is logged in but userId not found in SharedPreferences. Email: ${firebaseUser.email}");
+        
+        // Attempt to fetch userId from backend based on email
+        await _tryFetchUserIdByEmail(firebaseUser.email ?? '');
+      }
+
+      // If userId is still not available, try to load it again after a short delay
       // This handles race conditions with authentication
-      await Future.delayed(Duration(milliseconds: 800), () async {
-        prefs = await SharedPreferences.getInstance();
-        currentUserId = prefs.getString("userId");
+      if (currentUserId == null || currentUserId!.isEmpty) {
+        await Future.delayed(Duration(milliseconds: 800), () async {
+          prefs = await SharedPreferences.getInstance();
+          currentUserId = prefs.getString("userId");
 
-        print("HomePage: Retry loading userId: $currentUserId");
+          print("HomePage: Retry loading userId: $currentUserId");
 
-        setState(() {});  // Update UI with userId
+          setState(() {});  // Update UI with userId
 
-        if (currentUserId != null && currentUserId!.isNotEmpty) {
-          print("HomePage: Now fetching transactions after retry for userId: $currentUserId");
-          controller.fetchTransactions(currentUserId!);
-        } else {
-          print("HomePage: CRITICAL - Still no userId after retry");
-          Get.snackbar(
-            'Warning',
-            'Could not identify your account. Some features may not work correctly.',
-            backgroundColor: Colors.orange.withOpacity(0.7),
-            colorText: Colors.white,
-            snackPosition: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 5),
-          );
+          if (currentUserId != null && currentUserId!.isNotEmpty) {
+            print("HomePage: Now fetching transactions after retry for userId: $currentUserId");
+            controller.fetchTransactions(currentUserId!);
+          } else {
+            print("HomePage: CRITICAL - Still no userId after retry");
+            Get.snackbar(
+              'Warning',
+              'Could not identify your account. Please try signing out and signing in again.',
+              backgroundColor: Colors.orange.withOpacity(0.7),
+              colorText: Colors.white,
+              snackPosition: SnackPosition.BOTTOM,
+              duration: const Duration(seconds: 5),
+              mainButton: TextButton(
+                onPressed: () {
+                  // Navigate to login page
+                  Get.offAllNamed('/login');
+                },
+                child: Text('Sign In Again', style: TextStyle(color: Colors.white)),
+              ),
+            );
+          }
+        });
+      }
+    }
+  }
+  
+  // Try to fetch userId from backend using email
+  Future<void> _tryFetchUserIdByEmail(String email) async {
+    if (email.isEmpty) return;
+    
+    try {
+      print("HomePage: Attempting to fetch userId for email: $email");
+      // Use the backend API to get all users
+      final response = await http.get(
+        Uri.parse('${dotenv.env['BASE_URL'] ?? 'http://localhost:5000'}/api/users/getAllUsers'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> users = json.decode(response.body);
+        
+        // Manually find user with matching email
+        dynamic matchingUser;
+        for (var user in users) {
+          if (user['email'] == email) {
+            matchingUser = user;
+            break;
+          }
         }
-      });
+        
+        if (matchingUser != null && matchingUser['_id'] != null) {
+          final userId = matchingUser['_id'];
+          print("HomePage: Found userId $userId for email $email");
+          
+          // Store the userId in SharedPreferences
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString("userId", userId);
+          
+          // Update the current state
+          setState(() {
+            currentUserId = userId;
+          });
+          
+          // Fetch transactions with the recovered userId
+          controller.fetchTransactions(userId);
+          return;
+        }
+      }
+      
+      print("HomePage: Could not find userId for email: $email");
+    } catch (e) {
+      print("HomePage: Error fetching userId by email: $e");
     }
   }
 
@@ -395,39 +466,52 @@ class _HomePageState extends State<HomePage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return PreferredSize(
-      preferredSize: const Size.fromHeight(80),
+      preferredSize: const Size.fromHeight(100),
       child: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            color: isDark
-                ? const Color(0xFF1A1A1A).withOpacity(0.3)
-                : Colors.white.withOpacity(0.3),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? theme.colorScheme.surface.withOpacity(0.8)
+                  : theme.colorScheme.surface.withOpacity(0.3),
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outline.withOpacity(0.3),
+                  width: 0.5,
+                ),
+              ),
+            ),
             child: AppBar(
               elevation: 0,
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
-              toolbarHeight: 80,
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'FinanceTracker',
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
+              toolbarHeight: 100,
+              title: Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'FinanceTracker',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 28,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  Text(
-                    DateFormat('MMMM yyyy').format(DateTime.now()),
-                    style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
+                    const SizedBox(height: 4),
+                    Text(
+                      DateFormat('MMMM yyyy').format(DateTime.now()),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               actions: [
                 Obx(() => Stack(
@@ -475,22 +559,6 @@ class _HomePageState extends State<HomePage> {
                           ),
                       ],
                     )),
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: isDark ? Colors.white : Colors.black54,
-                    ),
-                    onPressed: () {},
-                  ),
-                ),
               ],
             ),
           ),
@@ -1121,7 +1189,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Dashboard',
                     isActive: true,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+
+                    },
                   ),
                   _ModernBottomNavItem(
                     icon: Icons.analytics_outlined,
@@ -1129,7 +1199,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Analytics',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+                      Get.toNamed('/analysis');
+                    },
                   ),
                   const SizedBox(width: 48), // Space for FAB
                   _ModernBottomNavItem(
@@ -1138,7 +1210,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Accounts',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+                      Get.toNamed('/analysis');
+                    },
                   ),
                   _ModernBottomNavItem(
                     icon: Icons.settings_outlined,
@@ -1146,7 +1220,9 @@ class _HomePageState extends State<HomePage> {
                     label: 'Settings',
                     isActive: false,
                     theme: theme,
-                    onTap: () {},
+                    onTap: () {
+                      Get.toNamed('/user-profile');
+                    },
                   ),
                 ],
               ),
@@ -1171,7 +1247,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Keep the existing _ModernTransactionCard and _ModernBottomNavItem classes as they are
 class _ModernTransactionCard extends StatelessWidget {
   final TransactionModel tx;
   final VoidCallback onDelete;

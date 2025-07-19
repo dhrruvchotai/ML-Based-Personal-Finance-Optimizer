@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+
 import '../../controllers/analysis_controller.dart';
 
 class AnalysisPage extends StatelessWidget {
@@ -27,6 +28,28 @@ class AnalysisPage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
+        actions: [
+          // PDF Download Button
+          Obx(() => controller.isGeneratingPdf.value
+            ? Container(
+                margin: const EdgeInsets.only(right: 16),
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                ),
+              )
+            : IconButton(
+                icon: Icon(
+                  Icons.download_rounded,
+                  color: theme.colorScheme.primary,
+                ),
+                tooltip: 'Download PDF Report',
+                onPressed: controller.generatePdfReport,
+              )
+          ),
+        ],
       ),
       backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       body: Obx(() {
@@ -55,7 +78,7 @@ class AnalysisPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => controller.fetchTransactions('687a5088ef80ce4d11f829aa'),
+                  onPressed: () => controller.loadUserIdAndFetchTransactions(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     foregroundColor: Colors.white,
@@ -72,6 +95,39 @@ class AnalysisPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Download Report Button
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                child: ElevatedButton.icon(
+                  onPressed: controller.isGeneratingPdf.value 
+                    ? null 
+                    : controller.generatePdfReport,
+                  icon: controller.isGeneratingPdf.value
+                    ? Container(
+                        width: 20,
+                        height: 20,
+                        margin: const EdgeInsets.only(right: 8),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.download_rounded),
+                  label: Text(
+                    controller.isGeneratingPdf.value
+                      ? 'Generating PDF...'
+                      : 'Download Financial Report',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
               _buildSummaryCards(context),
               const SizedBox(height: 32),
               _buildPieChartsSection(context),
@@ -194,16 +250,24 @@ class AnalysisPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        _buildPieChart(
-          context,
-          controller.getExpenseData(),
-          'Expenses',
+        // Wrap expense chart with RepaintBoundary for PDF generation
+        RepaintBoundary(
+          key: controller.expenseChartKey,
+          child: _buildPieChart(
+            context,
+            controller.getExpenseData(),
+            'Expenses',
+          ),
         ),
         const SizedBox(height: 32),
-        _buildPieChart(
-          context,
-          controller.getIncomeData(),
-          'Income',
+        // Wrap income chart with RepaintBoundary for PDF generation
+        RepaintBoundary(
+          key: controller.incomeChartKey,
+          child: _buildPieChart(
+            context,
+            controller.getIncomeData(),
+            'Income',
+          ),
         ),
       ],
     );
