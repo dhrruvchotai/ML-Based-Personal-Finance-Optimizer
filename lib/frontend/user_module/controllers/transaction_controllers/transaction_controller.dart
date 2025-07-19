@@ -31,8 +31,8 @@ class TransactionController extends GetxController{
   @override
   void onInit() async{
     super.onInit();
-    // Call fetchTransactions without async in onInit
-    await fetchTransactions('687a5088ef80ce4d11f829aa');
+    // Don't fetch transactions here, let the HomePage handle it with the correct userId
+    // No need to call fetchTransactions with a hardcoded ID
   }
 
   // Get transactions to display (filtered or all)
@@ -129,22 +129,31 @@ class TransactionController extends GetxController{
 
   Future<void> fetchTransactions(String userId) async{
     try{
+      if (userId.isEmpty) {
+        print('Error: Cannot fetch transactions with an empty userId');
+        errorMessage.value = 'Invalid user ID';
+        return;
+      }
+      
       isLoading.value = true;
       errorMessage.value = '';
       print('Starting to fetch transactions for user: $userId');
       
       final fetched = await _service.fetchTransactionsByUser(userId);
-      print(':::::::::::::::::::::::::::::::; $fetched');
-      print('Number of transactions fetched: ${fetched.length}');
+      print('Transactions fetched for userId $userId: ${fetched.length} transactions');
       
       transactions.assignAll(fetched);
+      
+      // Clear any filters when loading new user data
+      clearFilters();
+      
       print('Transactions assigned to observable: ${transactions.length}');
-    }catch (e){
-      print('Error in fetchTransactions: $e');
-      errorMessage.value = e.toString();
-    }finally{
+    } catch (e) {
+      print('Error in fetchTransactions for userId $userId: $e');
+      errorMessage.value = 'Failed to load transactions: ${e.toString()}';
+    } finally {
       isLoading.value = false;
-      print('Fetch transactions completed. Loading: ${isLoading.value}');
+      print('Fetch transactions completed for userId $userId. Loading: ${isLoading.value}');
     }
   }
 

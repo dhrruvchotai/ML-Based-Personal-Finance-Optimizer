@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'settings_view/user_profile_view.dart';
 
@@ -43,31 +47,98 @@ class _HomePageState extends State<HomePage> {
     } else {
       print("HomePage: WARNING - User ID not found in shared preferences.");
 
-      // If userId is not available, try to load it again after a short delay
+      // Try to check if user is actually logged in
+      final firebaseUser = await FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        print("HomePage: User is logged in but userId not found in SharedPreferences. Email: ${firebaseUser.email}");
+        
+        // Attempt to fetch userId from backend based on email
+        await _tryFetchUserIdByEmail(firebaseUser.email ?? '');
+      }
+
+      // If userId is still not available, try to load it again after a short delay
       // This handles race conditions with authentication
-      await Future.delayed(Duration(milliseconds: 800), () async {
-        prefs = await SharedPreferences.getInstance();
-        currentUserId = prefs.getString("userId");
+      if (currentUserId == null || currentUserId!.isEmpty) {
+        await Future.delayed(Duration(milliseconds: 800), () async {
+          prefs = await SharedPreferences.getInstance();
+          currentUserId = prefs.getString("userId");
 
-        print("HomePage: Retry loading userId: $currentUserId");
+          print("HomePage: Retry loading userId: $currentUserId");
 
-        setState(() {});  // Update UI with userId
+          setState(() {});  // Update UI with userId
 
-        if (currentUserId != null && currentUserId!.isNotEmpty) {
-          print("HomePage: Now fetching transactions after retry for userId: $currentUserId");
-          controller.fetchTransactions(currentUserId!);
-        } else {
-          print("HomePage: CRITICAL - Still no userId after retry");
-          Get.snackbar(
-            'Warning',
-            'Could not identify your account. Some features may not work correctly.',
-            backgroundColor: Colors.orange.withOpacity(0.7),
-            colorText: Colors.white,
-            snackPosition: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 5),
-          );
+          if (currentUserId != null && currentUserId!.isNotEmpty) {
+            print("HomePage: Now fetching transactions after retry for userId: $currentUserId");
+            controller.fetchTransactions(currentUserId!);
+          } else {
+            print("HomePage: CRITICAL - Still no userId after retry");
+            Get.snackbar(
+              'Warning',
+              'Could not identify your account. Please try signing out and signing in again.',
+              backgroundColor: Colors.orange.withOpacity(0.7),
+              colorText: Colors.white,
+              snackPosition: SnackPosition.BOTTOM,
+              duration: const Duration(seconds: 5),
+              mainButton: TextButton(
+                onPressed: () {
+                  // Navigate to login page
+                  Get.offAllNamed('/login');
+                },
+                child: Text('Sign In Again', style: TextStyle(color: Colors.white)),
+              ),
+            );
+          }
+        });
+      }
+    }
+  }
+  
+  // Try to fetch userId from backend using email
+  Future<void> _tryFetchUserIdByEmail(String email) async {
+    if (email.isEmpty) return;
+    
+    try {
+      print("HomePage: Attempting to fetch userId for email: $email");
+      // Use the backend API to get all users
+      final response = await http.get(
+        Uri.parse('${dotenv.env['BASE_URL'] ?? 'http://localhost:5000'}/api/users/getAllUsers'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> users = json.decode(response.body);
+        
+        // Manually find user with matching email
+        dynamic matchingUser;
+        for (var user in users) {
+          if (user['email'] == email) {
+            matchingUser = user;
+            break;
+          }
         }
-      });
+        
+        if (matchingUser != null && matchingUser['_id'] != null) {
+          final userId = matchingUser['_id'];
+          print("HomePage: Found userId $userId for email $email");
+          
+          // Store the userId in SharedPreferences
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString("userId", userId);
+          
+          // Update the current state
+          setState(() {
+            currentUserId = userId;
+          });
+          
+          // Fetch transactions with the recovered userId
+          controller.fetchTransactions(userId);
+          return;
+        }
+      }
+      
+      print("HomePage: Could not find userId for email: $email");
+    } catch (e) {
+      print("HomePage: Error fetching userId by email: $e");
     }
   }
 
