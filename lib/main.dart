@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,
-      initialRoute: '/chatbot',
+      initialRoute: '/signup',
       getPages: [
         GetPage(
           name: '/signup',
