@@ -6,6 +6,7 @@ class TransactionModel {
   final bool isExpense;
   final DateTime transactionDate;
   final String category;
+  final String? merchant;
 
   TransactionModel({
     this.transactionId,
@@ -15,6 +16,7 @@ class TransactionModel {
     required this.isExpense,
     required this.transactionDate,
     required this.category,
+    this.merchant,
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class TransactionModel {
         isExpense: json['isExpense'],
         transactionDate: transactionDate,
         category: json['category'],
+        merchant: json['merchant'],
       );
       
       print('TransactionModel: Successfully created model: $model');
@@ -61,6 +64,7 @@ class TransactionModel {
       'amount': amount,
       'description': description,
       'category': category,
+      'merchant': merchant,
     };
   }
 
@@ -72,6 +76,7 @@ class TransactionModel {
     bool? isExpense,
     DateTime? transactionDate,
     String? category,
+    String? merchant,
   }) {
     return TransactionModel(
       transactionId: transactionId ?? this.transactionId,
@@ -81,11 +86,12 @@ class TransactionModel {
       isExpense: isExpense ?? this.isExpense,
       transactionDate: transactionDate ?? this.transactionDate,
       category: category ?? this.category,
+      merchant: merchant ?? this.merchant,
     );
   }
 
   @override
   String toString() {
-    return 'TransactionModel(transactionId: $transactionId, userId: $userId, amount: $amount, description: $description, isExpense: $isExpense, transactionDate: $transactionDate, category: $category)';
+    return 'TransactionModel(transactionId: $transactionId, userId: $userId, amount: $amount, description: $description, isExpense: $isExpense, transactionDate: $transactionDate, category: $category, merchant: $merchant)';
   }
 }
