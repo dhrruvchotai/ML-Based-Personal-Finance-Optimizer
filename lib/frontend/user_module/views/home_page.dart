@@ -13,6 +13,166 @@ class HomePage extends StatelessWidget {
     controller.fetchTransactions(currentUserId);
   }
 
+  // Show filter dialog
+  void _showFilterDialog() {
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text('Filter Transactions'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Date Filter
+                const Text(
+                  'Date Range',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...controller.dateFilterOptions.map((option) => RadioListTile<String>(
+                  title: Text(option['label']!),
+                  value: option['value']!,
+                  groupValue: controller.selectedDateFilter.value,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      controller.selectedDateFilter.value = value ?? '';
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                )),
+                
+                const SizedBox(height: 16),
+                
+                // Type Filter
+                const Text(
+                  'Transaction Type',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...controller.typeFilterOptions.map((option) => RadioListTile<String>(
+                  title: Text(option['label']!),
+                  value: option['value']!,
+                  groupValue: controller.selectedTypeFilter.value,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      controller.selectedTypeFilter.value = value ?? '';
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                )),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Get.back();
+                  controller.clearFilters();
+                },
+                child: const Text('Clear All'),
+              ),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  controller.applyFilters();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Apply Filters'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Build filter summary widget
+  Widget _buildFilterSummary(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.blue.withOpacity(0.1) : Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            color: Colors.blue,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Filters Applied',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Obx(() => Text(
+                  controller.getFilterDescription(),
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    fontSize: 12,
+                  ),
+                )),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: controller.clearFilters,
+            child: Text(
+              'Clear',
+              style: TextStyle(
+                color: Colors.blue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Map<String, List<TransactionModel>> _groupTransactionsByDate(List<TransactionModel> txs) {
     final Map<String, List<TransactionModel>> grouped = {};
     for (var tx in txs) {
@@ -42,21 +202,29 @@ class HomePage extends StatelessWidget {
       backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: _buildModernAppBar(context),
       body: Obx(() {
-        final txs = controller.transactions;
+        final txs = controller.displayTransactions;
         final totalSpend = txs.where((e) => e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
         final totalIncome = txs.where((e) => !e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
         final balance = totalIncome - totalSpend;
-        final grouped = _groupTransactionsByDate(txs);
-        final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
         return Column(
           children: [
             _buildBalanceCard(context, totalSpend, totalIncome, balance),
+            // Show filter summary if filters are active
+            Obx(() => controller.hasActiveFilters 
+                ? _buildFilterSummary(context) 
+                : const SizedBox.shrink()),
             _buildQuickActions(context),
             Expanded(
-              child: txs.isEmpty
-                  ? _buildEmptyState(context)
-                  : _buildTransactionsList(context, grouped, sortedKeys),
+              child: Obx(() {
+                final txsToShow = controller.displayTransactions;
+                final grouped = _groupTransactionsByDate(txsToShow);
+                final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+                
+                return txsToShow.isEmpty
+                    ? _buildEmptyState(context, controller.hasActiveFilters)
+                    : _buildTransactionsList(context, grouped, sortedKeys);
+              }),
             ),
           ],
         );
@@ -98,6 +266,50 @@ class HomePage extends StatelessWidget {
         ],
       ),
       actions: [
+        // Filter Button with badge
+        Obx(() => Stack(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(right: 16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  Icons.filter_list,
+                  color: isDark ? Colors.white : Colors.black54,
+                ),
+                onPressed: () => _showFilterDialog(),
+              ),
+            ),
+            if (controller.hasActiveFilters)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                                      child: Text(
+                      '${controller.activeFiltersCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                ),
+              ),
+          ],
+        )),
         Container(
           margin: const EdgeInsets.only(right: 16),
           decoration: BoxDecoration(
@@ -426,7 +638,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, [bool isFiltered = false]) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -435,13 +647,13 @@ class HomePage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.receipt_long_outlined,
+            isFiltered ? Icons.filter_list_off : Icons.receipt_long_outlined,
             size: 64,
             color: isDark ? Colors.white30 : Colors.grey,
           ),
           const SizedBox(height: 16),
           Text(
-            'No transactions yet',
+            isFiltered ? 'No matching transactions' : 'No transactions yet',
             style: TextStyle(
               color: isDark ? Colors.white70 : Colors.black54,
               fontSize: 18,
@@ -450,12 +662,29 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add your first transaction to get started',
+            isFiltered 
+                ? 'Try adjusting your filters or clear them to see all transactions'
+                : 'Add your first transaction to get started',
             style: TextStyle(
               color: isDark ? Colors.white38 : Colors.black38,
               fontSize: 14,
             ),
+            textAlign: TextAlign.center,
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: controller.clearFilters,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Clear Filters'),
+            ),
+          ],
         ],
       ),
     );

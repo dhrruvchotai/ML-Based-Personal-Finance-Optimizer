@@ -45,6 +45,7 @@ class SignUpSignInController extends GetxController {
       //this need to be managed before push
       Get.off(HomePage());
 
+
       Get.snackbar(
         'Success',
         'Account created successfully!',
