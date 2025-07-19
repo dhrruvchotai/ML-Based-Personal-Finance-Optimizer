@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transitionPage.dart';
@@ -15,7 +14,172 @@ class HomePage extends StatelessWidget {
     controller.fetchTransactions(currentUserId);
   }
 
-  Map<String, List<TransactionModel>> _groupTransactionsByDate(List<TransactionModel> txs) {
+  // Show filter dialog
+  void _showFilterDialog() {
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text('Filter Transactions'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Date Filter
+                const Text(
+                  'Date Range',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...controller.dateFilterOptions
+                    .map((option) => RadioListTile<String>(
+                          title: Text(option['label']!),
+                          value: option['value']!,
+                          groupValue: controller.selectedDateFilter.value,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              controller.selectedDateFilter.value = value ?? '';
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                        )),
+
+                const SizedBox(height: 16),
+
+                // Type Filter
+                const Text(
+                  'Transaction Type',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...controller.typeFilterOptions
+                    .map((option) => RadioListTile<String>(
+                          title: Text(option['label']!),
+                          value: option['value']!,
+                          groupValue: controller.selectedTypeFilter.value,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              controller.selectedTypeFilter.value = value ?? '';
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                        )),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Get.back();
+                  controller.clearFilters();
+                },
+                child: const Text('Clear All'),
+              ),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  controller.applyFilters();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Apply Filters'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Build filter summary widget
+  Widget _buildFilterSummary(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.blue.withOpacity(0.1)
+            : Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            color: Colors.blue,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Filters Applied',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Obx(() => Text(
+                      controller.getFilterDescription(),
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                        fontSize: 12,
+                      ),
+                    )),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: controller.clearFilters,
+            child: Text(
+              'Clear',
+              style: TextStyle(
+                color: Colors.blue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Map<String, List<TransactionModel>> _groupTransactionsByDate(
+      List<TransactionModel> txs) {
     final Map<String, List<TransactionModel>> grouped = {};
     for (var tx in txs) {
       final dateKey = DateFormat('yyyy-MM-dd').format(tx.transactionDate);
@@ -29,7 +193,8 @@ class HomePage extends StatelessWidget {
 
   String _getDateLabel(String dateKey) {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final yesterday = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1)));
+    final yesterday = DateFormat('yyyy-MM-dd')
+        .format(DateTime.now().subtract(const Duration(days: 1)));
     if (dateKey == today) return 'Today';
     if (dateKey == yesterday) return 'Yesterday';
     return DateFormat('MMM dd, yyyy').format(DateTime.parse(dateKey));
@@ -41,61 +206,119 @@ class HomePage extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      backgroundColor:
+      isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: _buildModernAppBar(context),
       body: Obx(() {
         final txs = controller.transactions;
-        final totalSpend = txs.where((e) => e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
-        final totalIncome = txs.where((e) => !e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
+        final totalSpend =
+        txs.where((e) => e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
+        final totalIncome = txs
+            .where((e) => !e.isExpense)
+            .fold(0.0, (sum, e) => sum + e.amount);
         final balance = totalIncome - totalSpend;
-        final grouped = _groupTransactionsByDate(txs);
-        final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
-        // Combine balance card, quick actions, and transactions into a single scrollable ListView
-        return ListView(
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            _buildBalanceCard(context, totalSpend, totalIncome, balance),
-            _buildQuickActions(context),
-            if (txs.isEmpty)
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: _buildEmptyState(context),
-              )
-            else
-              ...sortedKeys.map((dateKey) {
-                final txList = grouped[dateKey]!;
-                final dailyIncome = txList.where((tx) => !tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
-                final dailyExpenses = txList.where((tx) => tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.03)
-                        : Colors.grey.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withOpacity(0.08)
-                          : Colors.grey.withOpacity(0.15),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses, containerized: true),
-                      const SizedBox(height: 8),
-                      ...txList.map((tx) => _ModernTransactionCard(
-                        tx: tx,
-                        onDelete: () => _showDeleteDialog(context, tx),
-                      )),
-                    ],
-                  ),
-                );
-              }).toList(),
-          ],
-        );
+        return Obx(() {
+          final txsToShow = controller.displayTransactions;
+
+          if (txsToShow.isEmpty) {
+            // When empty, keep the old structure for better UX
+            return Column(
+              children: [
+                _buildBalanceCard(context, totalSpend, totalIncome, balance),
+                controller.hasActiveFilters
+                    ? _buildFilterSummary(context)
+                    : const SizedBox.shrink(),
+                _buildQuickActions(context),
+                Expanded(
+                  child: _buildEmptyState(context, controller.hasActiveFilters),
+                ),
+              ],
+            );
+          }
+
+          final grouped = _groupTransactionsByDate(txsToShow);
+          final sortedKeys = grouped.keys.toList()
+            ..sort((a, b) => b.compareTo(a));
+
+          // Create a custom scroll view that includes everything
+          return CustomScrollView(
+            slivers: [
+              // Balance card as a sliver
+              SliverToBoxAdapter(
+                child: _buildBalanceCard(context, totalSpend, totalIncome, balance),
+              ),
+
+              // Filter summary as a sliver
+              SliverToBoxAdapter(
+                child: controller.hasActiveFilters
+                    ? _buildFilterSummary(context)
+                    : const SizedBox.shrink(),
+              ),
+
+              // Quick actions as a sliver
+              SliverToBoxAdapter(
+                child: _buildQuickActions(context),
+              ),
+
+              // Add some spacing
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 8),
+              ),
+
+              // Transaction list as a sliver list
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                    final dateKey = sortedKeys[index];
+                    final txList = grouped[dateKey]!;
+                    final dailyIncome = txList
+                        .where((tx) => !tx.isExpense)
+                        .fold(0.0, (sum, tx) => sum + tx.amount);
+                    final dailyExpenses = txList
+                        .where((tx) => tx.isExpense)
+                        .fold(0.0, (sum, tx) => sum + tx.amount);
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.03)
+                            : Colors.grey.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white.withOpacity(0.08)
+                              : Colors.grey.withOpacity(0.15),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDateHeader(
+                              context, dateKey, dailyIncome, dailyExpenses,
+                              containerized: true),
+                          const SizedBox(height: 8),
+                          ...txList.map((tx) => _ModernTransactionCard(
+                            tx: tx,
+                            onDelete: () => _showDeleteDialog(context, tx),
+                          )),
+                        ],
+                      ),
+                    );
+                  },
+                  childCount: sortedKeys.length,
+                ),
+              ),
+
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 100), // Extra space for FAB and bottom nav
+              ),
+            ],
+          );
+        });
       }),
       floatingActionButton: _buildModernFAB(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -143,10 +366,57 @@ class HomePage extends StatelessWidget {
                 ],
               ),
               actions: [
+                Obx(() => Stack(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 16),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.filter_list,
+                              color: isDark ? Colors.white : Colors.black54,
+                            ),
+                            onPressed: () => _showFilterDialog(),
+                          ),
+                        ),
+                        if (controller.hasActiveFilters)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '${controller.activeFiltersCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    )),
                 Container(
                   margin: const EdgeInsets.only(right: 16),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                    color: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
@@ -165,8 +435,8 @@ class HomePage extends StatelessWidget {
     );
   }
 
-
-  Widget _buildBalanceItem(BuildContext context, String label, String amount, IconData icon, Color color, bool isDark) {
+  Widget _buildBalanceItem(BuildContext context, String label, String amount,
+      IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -212,9 +482,9 @@ class HomePage extends StatelessWidget {
     );
   }
 
-
   // New compact balance card
-  Widget _buildBalanceCard(BuildContext context, double totalSpend, double totalIncome, double balance) {
+  Widget _buildBalanceCard(BuildContext context, double totalSpend,
+      double totalIncome, double balance) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -228,13 +498,13 @@ class HomePage extends StatelessWidget {
             gradient: LinearGradient(
               colors: isDark
                   ? [
-                const Color(0xFF2D3748),
-                const Color(0xFF4A5568),
-              ]
+                      const Color(0xFF2D3748),
+                      const Color(0xFF4A5568),
+                    ]
                   : [
-                const Color(0xFFEDF2F7),
-                const Color(0xFFE2E8F0),
-              ],
+                      const Color(0xFFEDF2F7),
+                      const Color(0xFFE2E8F0),
+                    ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -261,7 +531,9 @@ class HomePage extends StatelessWidget {
               Text(
                 'Total Balance',
                 style: TextStyle(
-                  color: isDark ? Colors.white.withOpacity(0.9) : Colors.black.withOpacity(0.7),
+                  color: isDark
+                      ? Colors.white.withOpacity(0.9)
+                      : Colors.black.withOpacity(0.7),
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -320,7 +592,8 @@ class HomePage extends StatelessWidget {
               margin: const EdgeInsets.all(8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.9),
+                color:
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.9),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(50),
                   bottomRight: Radius.circular(8),
@@ -334,7 +607,11 @@ class HomePage extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: Icon(Icons.currency_rupee_rounded,color: Theme.of(context).colorScheme.onPrimary,size: 25,),
+              child: Icon(
+                Icons.currency_rupee_rounded,
+                color: Theme.of(context).colorScheme.onPrimary,
+                size: 25,
+              ),
             ),
           ),
         ),
@@ -342,11 +619,10 @@ class HomePage extends StatelessWidget {
     );
   }
 
-
-  Widget _buildCompactBalanceItem(BuildContext context, String label, String amount, IconData icon, Color color) {
+  Widget _buildCompactBalanceItem(BuildContext context, String label,
+      String amount, IconData icon, Color color) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -406,7 +682,7 @@ class HomePage extends StatelessWidget {
               'Add Income',
               Icons.add,
               Colors.green,
-                  () => _navigateToAddTransaction(context, false),
+              () => _navigateToAddTransaction(context, false),
             ),
           ),
           const SizedBox(width: 12),
@@ -416,7 +692,7 @@ class HomePage extends StatelessWidget {
               'Add Expense',
               Icons.remove,
               Colors.red,
-                  () => _navigateToAddTransaction(context, true),
+              () => _navigateToAddTransaction(context, true),
             ),
           ),
         ],
@@ -424,7 +700,8 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionButton(BuildContext context, String label, IconData icon,
+      Color color, VoidCallback onTap) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -433,17 +710,18 @@ class HomePage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF232323) : Colors.white,
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: color.withOpacity(0.13), // more subtle border
+            color: color.withOpacity(0.2),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark ? Colors.transparent : Colors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 1),
+              color:
+                  isDark ? Colors.transparent : Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -453,7 +731,7 @@ class HomePage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08), // faint color accent for icon only
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(icon, color: color, size: 14),
@@ -463,7 +741,7 @@ class HomePage extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isDark ? Colors.white.withOpacity(0.92) : Colors.black.withOpacity(0.85),
+                  color: isDark ? Colors.white : Colors.black87,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -476,7 +754,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, [bool isFiltered = false]) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -485,13 +763,13 @@ class HomePage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.receipt_long_outlined,
+            isFiltered ? Icons.filter_list_off : Icons.receipt_long_outlined,
             size: 64,
             color: isDark ? Colors.white30 : Colors.grey,
           ),
           const SizedBox(height: 16),
           Text(
-            'No transactions yet',
+            isFiltered ? 'No matching transactions' : 'No transactions yet',
             style: TextStyle(
               color: isDark ? Colors.white70 : Colors.black54,
               fontSize: 18,
@@ -500,26 +778,48 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add your first transaction to get started',
+            isFiltered
+                ? 'Try adjusting your filters or clear them to see all transactions'
+                : 'Add your first transaction to get started',
             style: TextStyle(
               color: isDark ? Colors.white38 : Colors.black38,
               fontSize: 14,
             ),
+            textAlign: TextAlign.center,
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: controller.clearFilters,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Clear Filters'),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildTransactionsList(BuildContext context, Map<String, List<TransactionModel>> grouped, List<String> sortedKeys) {
+  Widget _buildTransactionsList(BuildContext context,
+      Map<String, List<TransactionModel>> grouped, List<String> sortedKeys) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: sortedKeys.length,
       itemBuilder: (context, idx) {
         final dateKey = sortedKeys[idx];
         final txList = grouped[dateKey]!;
-        final dailyIncome = txList.where((tx) => !tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
-        final dailyExpenses = txList.where((tx) => tx.isExpense).fold(0.0, (sum, tx) => sum + tx.amount);
+        final dailyIncome = txList
+            .where((tx) => !tx.isExpense)
+            .fold(0.0, (sum, tx) => sum + tx.amount);
+        final dailyExpenses = txList
+            .where((tx) => tx.isExpense)
+            .fold(0.0, (sum, tx) => sum + tx.amount);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 20),
@@ -538,12 +838,13 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses, containerized: true),
+              _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses,
+                  containerized: true),
               const SizedBox(height: 8),
               ...txList.map((tx) => _ModernTransactionCard(
-                tx: tx,
-                onDelete: () => _showDeleteDialog(context, tx),
-              )),
+                    tx: tx,
+                    onDelete: () => _showDeleteDialog(context, tx),
+                  )),
             ],
           ),
         );
@@ -552,7 +853,9 @@ class HomePage extends StatelessWidget {
   }
 
   // Update _buildDateHeader to optionally remove its own container styling
-  Widget _buildDateHeader(BuildContext context, String dateKey, double income, double expenses, {bool containerized = false}) {
+  Widget _buildDateHeader(
+      BuildContext context, String dateKey, double income, double expenses,
+      {bool containerized = false}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -604,7 +907,9 @@ class HomePage extends StatelessWidget {
         color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2),
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.2),
         ),
       ),
       child: Row(
@@ -652,9 +957,11 @@ class HomePage extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Delete Transaction'),
-          content: Text('Are you sure you want to delete this ${tx.isExpense ? 'expense' : 'income'} of ₹${tx.amount.toStringAsFixed(2)}?'),
+          content: Text(
+              'Are you sure you want to delete this ${tx.isExpense ? 'expense' : 'income'} of ₹${tx.amount.toStringAsFixed(2)}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -678,7 +985,7 @@ class HomePage extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-       color: Theme.of(context).colorScheme.primary,
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -844,7 +1151,9 @@ class _ModernTransactionCard extends StatelessWidget {
         color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2),
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : Colors.grey.withOpacity(0.2),
         ),
       ),
       child: ListTile(
@@ -854,7 +1163,7 @@ class _ModernTransactionCard extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             color: isDark
-                ?Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -928,6 +1237,7 @@ class _ModernBottomNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     // Using your app theme colors
@@ -945,7 +1255,8 @@ class _ModernBottomNavItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          margin: const EdgeInsets.symmetric(horizontal: 2), // Small margin to prevent overflow
+          margin: const EdgeInsets.symmetric(
+              horizontal: 2), // Small margin to prevent overflow
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(16),
