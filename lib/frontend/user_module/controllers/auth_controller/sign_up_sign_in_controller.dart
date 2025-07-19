@@ -42,20 +42,21 @@ class SignUpSignInController extends GetxController {
   }
 
   void signUp(GlobalKey<FormState> formKey) async {
+    final SignUpSignInController controller = Get.find<SignUpSignInController>();
     if (!formKey.currentState!.validate()) return;
     isLoading.value = true;
-    
+
     try {
       final user = await authModel.signUpWithEmail(emailController.text.trim(), passwordController.text);
-      
+
       if(user != null) {
         print("Signup successful for email: ${emailController.text}");
-        
+
         // Verify that userId is stored
         final prefs = await SharedPreferences.getInstance();
         final storedUserId = prefs.getString("userId");
         print("Stored userId after signup: $storedUserId");
-        
+
         if (storedUserId == null || storedUserId.isEmpty) {
           print("WARNING: userId not found in SharedPreferences after successful signup");
           // Attempt to fetch it again as a last resort
@@ -68,7 +69,7 @@ class SignUpSignInController extends GetxController {
             print("Error during retry fetch of userId: $e");
           }
         }
-        
+
         // Navigate to homepage
         Get.off(HomePage());
 
@@ -103,7 +104,7 @@ class SignUpSignInController extends GetxController {
     final SignUpSignInController controller = Get.find<SignUpSignInController>();
     if (!formKey.currentState!.validate()) return;
     isLoading.value = true;
-    
+
     // Check if admin credentials are used
     if (emailController.text == 'admin@gmail.com' && passwordController.text == 'admin@123') {
       // Redirect to admin dashboard
@@ -120,17 +121,17 @@ class SignUpSignInController extends GetxController {
       );
       return;
     }
-    
+
     try {
       final user = await authModel.loginWithEmail(emailController.text.trim(), passwordController.text);
       if(user != null) {
         print("Login successful for email: ${emailController.text}");
-        
+
         // Verify that userId is stored
         final prefs = await SharedPreferences.getInstance();
         final storedUserId = prefs.getString("userId");
         print("Stored userId after login: $storedUserId");
-        
+
         if (storedUserId == null || storedUserId.isEmpty) {
           print("WARNING: userId not found in SharedPreferences after successful login");
           // Attempt to fetch it again as a last resort
@@ -143,7 +144,7 @@ class SignUpSignInController extends GetxController {
             print("Error during retry fetch of userId: $e");
           }
         }
-        
+
         // Navigate to homepage
         Get.off(HomePage());
 
@@ -155,7 +156,7 @@ class SignUpSignInController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           borderRadius: 12,
           margin: const EdgeInsets.all(16),
-        );  
+        );
       } else {
         Get.snackbar(
           'Error',
@@ -185,16 +186,16 @@ class SignUpSignInController extends GetxController {
 
   void googleSignUp() async {
     isLoading.value = true;
-    
+
     try {
       final user = await authModel.loginWithGoogle();
-      
+
       if(user != null) {
         // Verify that userId is stored
         final prefs = await SharedPreferences.getInstance();
         final storedUserId = prefs.getString("userId");
         print("Stored userId after Google sign-in: $storedUserId");
-        
+
         if (storedUserId == null) {
           print("WARNING: userId not found in SharedPreferences after successful Google sign-in");
           Get.snackbar(
@@ -208,10 +209,10 @@ class SignUpSignInController extends GetxController {
             duration: const Duration(seconds: 5),
           );
         }
-        
+
         // Navigate to homepage
         Get.off(HomePage());
-        
+
         Get.snackbar(
           'Success',
           'Google sign in successful!',
