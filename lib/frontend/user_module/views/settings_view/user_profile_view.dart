@@ -266,13 +266,13 @@ class UserProfileView extends StatelessWidget {
                     },
                   ), // Space for FAB
                   _ModernBottomNavItem(
-                    icon: Icons.account_balance_wallet_outlined,
-                    activeIcon: Icons.account_balance_wallet_rounded,
-                    label: 'Accounts',
+                    icon: Icons.flag_outlined,
+                    activeIcon: Icons.flag_rounded,
+                    label: 'Goals',
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/analysis');
+                      Get.toNamed('/goals');
                     },
                   ),
                   _ModernBottomNavItem(
