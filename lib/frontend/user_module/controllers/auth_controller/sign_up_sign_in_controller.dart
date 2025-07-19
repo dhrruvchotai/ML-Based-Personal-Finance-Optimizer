@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:ml_based_personal_finance_optimizer/frontend/user_module/services/auth_services.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 
 import '../../models/auth_model.dart';
@@ -8,7 +7,6 @@ import '../../models/auth_model.dart';
 class SignUpSignInController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  AuthService _authService = AuthService();
 
   var isLoading = false.obs;
   var isPasswordVisible = false.obs;
@@ -45,7 +43,6 @@ class SignUpSignInController extends GetxController {
     final user = await authModel.signUpWithEmail(emailController.text, passwordController.text);
     if(user != null){
       //this need to be managed before push
-      await _authService.addUser(userName: user.displayName, email: user.email);
       Get.off(HomePage());
 
 
