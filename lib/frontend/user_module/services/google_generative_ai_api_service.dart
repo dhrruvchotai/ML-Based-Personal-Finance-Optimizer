@@ -5,6 +5,8 @@ class GoogleGenerativeAiApiService {
   //API
   final String? Google_GenerativeAI_API_Key =
       dotenv.env['GOOGLE_GENERATIVE_AI_API_KEY'];
+  String? userId;
+  SharedPrefren
 
   GoogleGenerativeAiApiService() {
     if (Google_GenerativeAI_API_Key == null ||
