@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../controllers/analysis_controller.dart';
 import '../transactionPage.dart';
@@ -108,7 +108,6 @@ class AnalysisPage extends StatelessWidget {
 
               _buildSummaryCards(context),
               const SizedBox(height: 32),
-              _buildPieChartsSection(context),
               // Download Report Button
               const SizedBox(height: 12),
               Container(
@@ -118,16 +117,16 @@ class AnalysisPage extends StatelessWidget {
                       ? null
                       : controller.generatePdfReport,
                   icon: controller.isGeneratingPdf.value
-                      ? Container(
-                    width: 20,
-                    height: 20,
-                    margin: const EdgeInsets.only(right: 8),
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                      : const Icon(Icons.download_rounded),
+                    ? Container(
+                        width: 20,
+                        height: 20,
+                        margin: const EdgeInsets.only(right: 8),
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.download_rounded),
                   label: Text(
                     controller.isGeneratingPdf.value
                         ? 'Generating PDF...'
@@ -143,7 +142,10 @@ class AnalysisPage extends StatelessWidget {
                   ),
                 ),
               ),
-
+              const SizedBox(height: 32),
+              _buildChartsSection(context),
+              const SizedBox(height: 32),
+              _buildMonthlyTrendsChart(context),
             ],
           ),
         );
@@ -241,7 +243,6 @@ class AnalysisPage extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildSummaryCards(BuildContext context) {
     final cards = [
@@ -342,7 +343,7 @@ class AnalysisPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPieChartsSection(BuildContext context) {
+  Widget _buildChartsSection(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -355,7 +356,7 @@ class AnalysisPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        // Wrap expense chart with RepaintBoundary for PDF generation
+        // Expense chart with RepaintBoundary for PDF generation
         RepaintBoundary(
           key: controller.expenseChartKey,
           child: _buildPieChart(
@@ -365,10 +366,10 @@ class AnalysisPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 32),
-        // Wrap income chart with RepaintBoundary for PDF generation
+        // Income chart with RepaintBoundary for PDF generation
         RepaintBoundary(
           key: controller.incomeChartKey,
-          child: _buildPieChart(
+          child: _buildDonutChart(
             context,
             controller.getIncomeData(),
             'Income',
@@ -389,21 +390,33 @@ class AnalysisPage extends StatelessWidget {
     }
 
     final List<Color> colors = [
-      Color(0xFFA8D5BA), // Pastel mint green (replaces theme.colorScheme.primary)
-      Color(0xFFFFCBCB), // Pastel pink/peach (secondary)
-      Color(0xFFFFF6B7), // Pale yellow (tertiary)
-      Color(0xFFFFB6B9), // Soft red/coral (error)
-      Color(0xFFD6E5FA), // Pastel sky blue (primaryContainer)
-      Color(0xFFFFECD2), // Creamy orange (secondaryContainer)
-      Color(0xFFC4C1E0), // Lavender pastel (surfaceVariant)
-      Color(0xFFB2DFDB), // Pastel teal
-      Color(0xFFFFE082), // Pastel yellow/amber
-      Color(0xFFD1C4E9), // Pastel purple
-      Color(0xFFFFB5E8), // Light pastel pink
+      const Color(0xFFA8D5BA), // Pastel mint green
+      const Color(0xFFFFCBCB), // Pastel pink/peach
+      const Color(0xFFFFF6B7), // Pale yellow
+      const Color(0xFFFFB6B9), // Soft red/coral
+      const Color(0xFFD6E5FA), // Pastel sky blue
+      const Color(0xFFFFECD2), // Creamy orange
+      const Color(0xFFC4C1E0), // Lavender pastel
+      const Color(0xFFB2DFDB), // Pastel teal
+      const Color(0xFFFFE082), // Pastel yellow/amber
+      const Color(0xFFD1C4E9), // Pastel purple
+      const Color(0xFFFFB5E8), // Light pastel pink
     ];
 
     final entries = data.entries.toList();
     final total = data.values.fold(0.0, (sum, value) => sum + value);
+
+    // Create the chart data
+    List<ChartData> chartData = entries.asMap().entries.map((entry) {
+      final index = entry.key;
+      final category = entry.value.key;
+      final amount = entry.value.value;
+      return ChartData(
+        category,
+        amount,
+        colors[index % colors.length],
+      );
+    }).toList();
 
     return Card(
       elevation: 2,
@@ -420,72 +433,328 @@ class AnalysisPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 220,
-              child: PieChart(
-                PieChartData(
-                  sections: entries.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final category = entry.value.key;
-                    final amount = entry.value.value;
-                    final percentage = (amount / total) * 100;
-                    return PieChartSectionData(
-                      color: colors[index % colors.length],
-                      value: amount,
-                      title: '${percentage.toStringAsFixed(1)}%',
-                      radius: 75,
-                      titleStyle: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    );
-                  }).toList(),
-                  centerSpaceRadius: 35,
-                  sectionsSpace: 2.5,
+              height: 300,
+              child: SfCircularChart(
+                title: ChartTitle(
+                  text: title,
+                  textStyle: theme.textTheme.titleSmall,
                 ),
+                legend: Legend(
+                  isVisible: true,
+                  overflowMode: LegendItemOverflowMode.wrap,
+                  position: LegendPosition.bottom,
+                ),
+                tooltipBehavior: TooltipBehavior(
+                  enable: true,
+                  format: 'point.x: \$point.y',
+                  duration: 1500,
+                ),
+                series: <CircularSeries>[
+                  PieSeries<ChartData, String>(
+                    dataSource: chartData,
+                    xValueMapper: (ChartData data, _) => data.category,
+                    yValueMapper: (ChartData data, _) => data.amount,
+                    pointColorMapper: (ChartData data, _) => data.color,
+                    dataLabelSettings: const DataLabelSettings(
+                      isVisible: true,
+                      labelPosition: ChartDataLabelPosition.outside,
+                      connectorLineSettings: ConnectorLineSettings(
+                        type: ConnectorType.curve,
+                        length: '15%',
+                      ),
+                      labelIntersectAction: LabelIntersectAction.shift,
+                      useSeriesColor: true,
+                    ),
+                    radius: '80%',
+                    explode: true,
+                    explodeIndex: 0,
+                    explodeOffset: '10%',
+                    // Add animations
+                    animationDuration: 1500,
+                    enableTooltip: true,
+                  )
+                ],
+                annotations: <CircularChartAnnotation>[
+                  CircularChartAnnotation(
+                    widget: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '\$${total.toStringAsFixed(0)}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          'Total',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.hintColor,
+                          ),
+                        ),
+                      ],
+                    )
+                  )
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: entries.asMap().entries.map((entry) {
-                final index = entry.key;
-                final category = entry.value.key;
-                final amount = entry.value.value;
-                final percentage = (amount / total) * 100;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: colors[index % colors.length],
-                          shape: BoxShape.circle,
-                        ),
+            const SizedBox(height: 10),
+            _buildDataTable(context, entries, total, colors),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDonutChart(
+      BuildContext context,
+      Map<String, double> data,
+      String title,
+      ) {
+    final theme = Theme.of(context);
+    if (data.isEmpty) {
+      return _buildEmptyChart(context, title);
+    }
+
+    final List<Color> colors = [
+      const Color(0xFF6699CC), // Blue
+      const Color(0xFFEE8866), // Salmon
+      const Color(0xFF88BBAA), // Teal
+      const Color(0xFFDDAA33), // Gold
+      const Color(0xFF997799), // Purple
+      const Color(0xFFFFB366), // Light orange
+      const Color(0xFF44AA99), // Green
+      const Color(0xFFBB5566), // Red
+      const Color(0xFF9988DD), // Lavender
+      const Color(0xFF55BBAA), // Aqua
+    ];
+
+    final entries = data.entries.toList();
+    final total = data.values.fold(0.0, (sum, value) => sum + value);
+
+    // Create the chart data
+    List<ChartData> chartData = entries.asMap().entries.map((entry) {
+      final index = entry.key;
+      final category = entry.value.key;
+      final amount = entry.value.value;
+      return ChartData(
+        category,
+        amount,
+        colors[index % colors.length],
+      );
+    }).toList();
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: theme.colorScheme.surface,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 300,
+              child: SfCircularChart(
+                title: ChartTitle(
+                  text: title,
+                  textStyle: theme.textTheme.titleSmall,
+                ),
+                legend: Legend(
+                  isVisible: true,
+                  overflowMode: LegendItemOverflowMode.wrap,
+                  position: LegendPosition.bottom,
+                ),
+                tooltipBehavior: TooltipBehavior(
+                  enable: true,
+                  format: 'point.x: \$point.y',
+                  duration: 1500,
+                ),
+                series: <CircularSeries>[
+                  DoughnutSeries<ChartData, String>(
+                    dataSource: chartData,
+                    xValueMapper: (ChartData data, _) => data.category,
+                    yValueMapper: (ChartData data, _) => data.amount,
+                    pointColorMapper: (ChartData data, _) => data.color,
+                    dataLabelSettings: const DataLabelSettings(
+                      isVisible: true,
+                      labelPosition: ChartDataLabelPosition.outside,
+                      connectorLineSettings: ConnectorLineSettings(
+                        type: ConnectorType.curve,
+                        length: '15%',
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          category,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    ),
+                    innerRadius: '60%',
+                    radius: '80%',
+                    explode: true,
+                    // Add animations
+                    animationDuration: 1500,
+                    enableTooltip: true,
+                  )
+                ],
+                annotations: <CircularChartAnnotation>[
+                  CircularChartAnnotation(
+                    widget: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '\$${total.toStringAsFixed(0)}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      Text(
-                        '\$${amount.toStringAsFixed(2)}  (${percentage.toStringAsFixed(1)}%)',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.hintColor,
-                          fontSize: 12,
+                        Text(
+                          'Total',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.hintColor,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    )
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            _buildDataTable(context, entries, total, colors),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDataTable(BuildContext context, List<MapEntry<String, double>> entries,
+      double total, List<Color> colors) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: entries.asMap().entries.map((entry) {
+        final index = entry.key;
+        final category = entry.value.key;
+        final amount = entry.value.value;
+        final percentage = (amount / total) * 100;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: colors[index % colors.length],
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  category,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                );
-              }).toList(),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                '\$${amount.toStringAsFixed(2)}  (${percentage.toStringAsFixed(1)}%)',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.hintColor,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildMonthlyTrendsChart(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // Sample monthly data - In a real app, you would get this from your controller
+    final List<MonthlyData> monthlyData = [
+      MonthlyData('Jan', 1200, 900),
+      MonthlyData('Feb', 1300, 1000),
+      MonthlyData('Mar', 1100, 1200),
+      MonthlyData('Apr', 1400, 1100),
+      MonthlyData('May', 1500, 1300),
+      MonthlyData('Jun', 1350, 1250),
+    ];
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: theme.colorScheme.surface,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Monthly Trends',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 300,
+              child: SfCartesianChart(
+                plotAreaBorderWidth: 0,
+                primaryXAxis: CategoryAxis(
+                  majorGridLines: const MajorGridLines(width: 0),
+                  labelStyle: theme.textTheme.bodySmall,
+                ),
+                primaryYAxis: NumericAxis(
+                  numberFormat: NumberFormat.currency(symbol: '\$', decimalDigits: 0),
+                  majorGridLines: const MajorGridLines(width: 0.5, dashArray: <double>[5, 5]),
+                  axisLine: const AxisLine(width: 0),
+                  labelStyle: theme.textTheme.bodySmall,
+                ),
+                legend: Legend(
+                  isVisible: true,
+                  position: LegendPosition.top,
+                  overflowMode: LegendItemOverflowMode.wrap,
+                ),
+                tooltipBehavior: TooltipBehavior(
+                  enable: true,
+                  animationDuration: 1000,
+                ),
+                series: <CartesianSeries<MonthlyData, String>>[
+                  ColumnSeries<MonthlyData, String>(
+                    name: 'Income',
+                    dataSource: monthlyData,
+                    xValueMapper: (MonthlyData data, _) => data.month,
+                    yValueMapper: (MonthlyData data, _) => data.income,
+                    color: theme.colorScheme.primary.withOpacity(0.7),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    width: 0.4,
+                    spacing: 0.2,
+                    animationDuration: 1500,
+                    enableTooltip: true,
+                  ),
+                  ColumnSeries<MonthlyData, String>(
+                    name: 'Expenses',
+                    dataSource: monthlyData,
+                    xValueMapper: (MonthlyData data, _) => data.month,
+                    yValueMapper: (MonthlyData data, _) => data.expense,
+                    color: theme.colorScheme.error.withOpacity(0.7),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    width: 0.4,
+                    spacing: 0.2,
+                    animationDuration: 1500,
+                    enableTooltip: true,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -603,4 +872,20 @@ class _ModernBottomNavItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class ChartData {
+  final String category;
+  final double amount;
+  final Color color;
+
+  ChartData(this.category, this.amount, this.color);
+}
+
+class MonthlyData {
+  final String month;
+  final double income;
+  final double expense;
+
+  MonthlyData(this.month, this.income, this.expense);
 }
