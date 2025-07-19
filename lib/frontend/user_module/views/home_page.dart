@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TransactionController controller = Get.put(TransactionController());
+  TransactionController controller = Get.find<TransactionController>();
   String? currentUserId;
 
 
