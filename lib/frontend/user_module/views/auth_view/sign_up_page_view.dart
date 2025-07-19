@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/auth_view/sign_in_page_view.dart';
 
-import '../../controllers/auth_controller/sign_up_controller.dart';
+import '../../controllers/auth_controller/sign_up_sign_in_controller.dart';
 import '../../custom_widgets/auth_widgets/animated_button_widget.dart';
 import '../../custom_widgets/auth_widgets/animated_continue_with_google_button_widget.dart';
 import '../../custom_widgets/auth_widgets/animated_divider_widget.dart';
@@ -14,7 +14,7 @@ class SignUpPage extends StatelessWidget {
   SignUpPage({Key? key}) : super(key: key);
 
   final _formKey = GlobalKey<FormState>();
-  final SignUpController controller = Get.put(SignUpController());
+  final SignUpSignInController controller = Get.put(SignUpSignInController());
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +111,7 @@ class SignUpPage extends StatelessWidget {
                           ? null
                           : () {
                               if (_formKey.currentState!.validate()) {
-                                controller.signUp(context, _formKey);
+                                controller.signUp(_formKey);
                               }
                             },
                     )),
@@ -123,7 +123,7 @@ class SignUpPage extends StatelessWidget {
                     Obx(() => ContinueWithGoogleButton(
                       onPressed: controller.isLoading.value
                           ? null
-                          : () => controller.googleSignUp(context),
+                          : () => controller.googleSignUp(),
                       isLoading: controller.isLoading.value,
                       delay: 200,
                     )),

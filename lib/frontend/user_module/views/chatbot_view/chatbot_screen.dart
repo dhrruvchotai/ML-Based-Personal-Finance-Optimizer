@@ -1,31 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../controllers/chatbot_controller/chatbot_controller.dart';
 
-class ChatBotScreen extends StatefulWidget {
-  const ChatBotScreen({Key? key}) : super(key: key);
+class ChatBotScreen extends StatelessWidget {
+  ChatBotScreen({Key? key}) : super(key: key);
 
-  @override
-  State<ChatBotScreen> createState() => _ChatBotScreenState();
-}
-
-class _ChatBotScreenState extends State<ChatBotScreen> {
-  final List<Map<String, String>> _messages = [];
-  final TextEditingController _controller = TextEditingController();
+  final ChatBotController controller = Get.put(ChatBotController());
+  final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   void _sendMessage() {
-    final text = _controller.text.trim();
+    final text = _textController.text.trim();
     if (text.isEmpty) return;
-    setState(() {
-      _messages.add({'sender': 'user', 'text': text});
-      // Simulate bot response
-      Future.delayed(const Duration(milliseconds: 800), () {
-        setState(() {
-          _messages.add({'sender': 'bot', 'text': 'You said: $text'});
-          _scrollToBottom();
-        });
-      });
-    });
-    _controller.clear();
+    controller.sendMessage(text);
+    _textController.clear();
     _scrollToBottom();
   }
 
@@ -67,34 +55,48 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF8F9FF), Color(0xFFE8EEFF)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: _messages.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[index];
-                        final isUser = message['sender'] == 'user';
-                        return _buildMessageBubble(message, isUser);
-                      },
-                    ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFF8F9FF), Color(0xFFE8EEFF)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
-            _buildInputSection(),
-          ],
-        ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Obx(() {
+                    if (controller.messages.isEmpty) {
+                      return _buildEmptyState();
+                    }
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      itemCount: controller.messages.length,
+                      itemBuilder: (context, index) {
+                        final message = controller.messages[index];
+                        final isUser = message['sender'] == 'user';
+                        return _buildMessageBubble(context, message, isUser);
+                      },
+                    );
+                  }),
+                ),
+                _buildInputSection(),
+              ],
+            ),
+          ),
+          Obx(() => controller.isLoading.value
+              ? Container(
+                  color: Colors.black.withOpacity(0.2),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              : const SizedBox.shrink()),
+        ],
       ),
     );
   }
@@ -139,12 +141,11 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
     );
   }
 
-  Widget _buildMessageBubble(Map<String, String> message, bool isUser) {
+  Widget _buildMessageBubble(BuildContext context, Map<String, String> message, bool isUser) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser) ...[
@@ -181,9 +182,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isUser
-                    ? const Color(0xFF6C5CE7)
-                    : Colors.white,
+                color: isUser ? const Color(0xFF6C5CE7) : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -267,7 +266,7 @@ class _ChatBotScreenState extends State<ChatBotScreen> {
                   ),
                 ),
                 child: TextField(
-                  controller: _controller,
+                  controller: _textController,
                   decoration: const InputDecoration(
                     hintText: 'Type your message...',
                     hintStyle: TextStyle(

@@ -37,7 +37,14 @@ dependencies:
   http:
   get:
   intl:
+  image_picker:
   flutter_dotenv: ^5.2.1
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.2
+  firebase_auth: ^5.6.2
+  firebase_core:
+  google_sign_in: ^6.3.0
+  google_generative_ai:
 
 dev_dependencies:
   flutter_test:
