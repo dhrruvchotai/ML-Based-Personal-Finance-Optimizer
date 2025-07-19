@@ -48,6 +48,7 @@ class SignUpSignInController extends GetxController {
       await _authService.addUser(userName: user.displayName, email: user.email);
       Get.off(HomePage());
 
+
       Get.snackbar(
         'Success',
         'Account created successfully!',
