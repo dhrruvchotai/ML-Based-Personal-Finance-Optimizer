@@ -27,13 +27,6 @@ class UserProfileView extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: Theme.of(context).colorScheme.onBackground,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         actions: [
           // Theme Toggle Button
           IconButton(
@@ -72,7 +65,7 @@ class UserProfileView extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.chat),
         onPressed: () {
-          Get.toNamed('/chatbot');
+          Get.offNamed('/chatbot');
         },
       ),
       body: Obx(() {
@@ -376,7 +369,7 @@ class UserProfileView extends StatelessWidget {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/homePage');
+                      Get.offNamed('/homePage');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -386,7 +379,7 @@ class UserProfileView extends StatelessWidget {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/analysis');
+                      Get.offNamed('/analysis');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -396,7 +389,7 @@ class UserProfileView extends StatelessWidget {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/goals');
+                      Get.offNamed('/goals');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -406,7 +399,7 @@ class UserProfileView extends StatelessWidget {
                     isActive: true,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/user-profile');
+                      Get.offNamed('/user-profile');
                     },
                   ),
                 ],
@@ -424,37 +417,40 @@ class UserProfileView extends StatelessWidget {
         Obx(() {
           return Stack(
             children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: controller.selectedImage.value != null
-                      ? Image.file(
-                    controller.selectedImage.value!,
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                  )
-                      : Container(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
-                    child: Icon(
-                      Icons.person,
-                      size: 60,
+              GestureDetector(
+                onTap: controller.pickImage,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
                       color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: controller.selectedImage.value != null
+                        ? Image.file(
+                      controller.selectedImage.value!,
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    )
+                        : Container(
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      child: Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
