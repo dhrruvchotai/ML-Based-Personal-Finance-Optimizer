@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
@@ -31,6 +32,7 @@ class AnalysisController extends GetxController {
   // Chart screenshot keys
   final GlobalKey expenseChartKey = GlobalKey();
   final GlobalKey incomeChartKey = GlobalKey();
+  final GlobalKey monthlyTrendsChartKey = GlobalKey(); // Add key for monthly trends chart
   
   @override
   void onInit() {
@@ -144,6 +146,56 @@ class AnalysisController extends GetxController {
     return dateTotals;
   }
   
+  // Get monthly trends data for both income and expenses
+  List<MonthlyTrendsData> getMonthlyTrendsData() {
+    if (filteredTransactions.isEmpty) {
+      return [];
+    }
+    
+    // Group transactions by year-month
+    final Map<String, Map<String, double>> monthlyData = {};
+    
+    for (var transaction in filteredTransactions) {
+      final year = transaction.transactionDate.year;
+      final month = transaction.transactionDate.month;
+      final String monthKey = '$year-${month.toString().padLeft(2, '0')}';
+      
+      if (!monthlyData.containsKey(monthKey)) {
+        monthlyData[monthKey] = {'income': 0.0, 'expense': 0.0};
+      }
+      
+      if (transaction.isExpense) {
+        monthlyData[monthKey]!['expense'] = (monthlyData[monthKey]!['expense'] ?? 0) + transaction.amount;
+      } else {
+        monthlyData[monthKey]!['income'] = (monthlyData[monthKey]!['income'] ?? 0) + transaction.amount;
+      }
+    }
+    
+    // Sort months chronologically
+    final sortedKeys = monthlyData.keys.toList()..sort();
+    
+    // Take only the last 6 months or all if less than 6
+    final displayKeys = sortedKeys.length > 6 
+        ? sortedKeys.sublist(sortedKeys.length - 6) 
+        : sortedKeys;
+    
+    // Convert to list of MonthlyTrendsData
+    return displayKeys.map((key) {
+      final parts = key.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      
+      final monthName = DateFormat('MMM').format(DateTime(year, month));
+      
+      return MonthlyTrendsData(
+        monthName,
+        monthlyData[key]!['income']!,
+        monthlyData[key]!['expense']!,
+        DateTime(year, month),
+      );
+    }).toList();
+  }
+  
   // Get total expenses
   double get totalExpenses {
     return filteredTransactions
@@ -193,10 +245,12 @@ class AnalysisController extends GetxController {
       // Capture chart screenshots if keys are attached to widgets
       Uint8List? expenseChartImage;
       Uint8List? incomeChartImage;
+      Uint8List? monthlyTrendsImage;
       
       try {
         expenseChartImage = await captureWidget(expenseChartKey);
         incomeChartImage = await captureWidget(incomeChartKey);
+        monthlyTrendsImage = await captureWidget(monthlyTrendsChartKey);
       } catch (e) {
         print('Error capturing charts: $e');
         // Continue without chart images
@@ -229,6 +283,7 @@ class AnalysisController extends GetxController {
         userName: userName,
         expenseChartImage: expenseChartImage,
         incomeChartImage: incomeChartImage,
+        monthlyTrendsChartImage: monthlyTrendsImage,
       );
       
       // Send PDF to server
@@ -315,4 +370,14 @@ class AnalysisController extends GetxController {
   void refreshMarketData() {
     fetchMarketData();
   }
+} 
+
+// Class to hold monthly trends data
+class MonthlyTrendsData {
+  final String month;
+  final double income;
+  final double expense;
+  final DateTime date; // Store actual date for sorting
+  
+  MonthlyTrendsData(this.month, this.income, this.expense, this.date);
 } 
