@@ -253,10 +253,4 @@ class SignUpSignInController extends GetxController {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
 
-  @override
-  void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.onClose();
-  }
 }

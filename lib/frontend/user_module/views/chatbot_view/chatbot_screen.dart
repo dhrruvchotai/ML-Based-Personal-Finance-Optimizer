@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 import '../../controllers/chatbot_controller/chatbot_controller.dart';
 
 class ChatBotScreen extends StatefulWidget {
@@ -170,7 +171,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF6B7280), size: 18),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Get.offAllNamed('/homePage'),
                 padding: EdgeInsets.zero,
               ),
             ),
