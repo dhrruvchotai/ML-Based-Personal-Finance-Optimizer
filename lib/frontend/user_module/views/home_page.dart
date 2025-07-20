@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transactionPage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/transactionPage.dart';
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
@@ -11,11 +10,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'settings_view/user_profile_view.dart';
 
 class HomePage extends StatefulWidget {
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -23,28 +20,37 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   TransactionController controller = Get.find<TransactionController>();
   String? currentUserId;
-
+  bool _isInitialLoading = true; // Add loading state
+  bool _isDataLoading = false; // Add data loading state
 
   @override
   void initState() {
     super.initState();
     _loadUserIdAndFetch();
-    // Don't call fetchTransactions here because currentUserId is still null
-    // controller.fetchTransactions(currentUserId!); // This line causes the error
   }
 
   Future<void> _loadUserIdAndFetch() async {
+    setState(() {
+      _isInitialLoading = true;
+      _isDataLoading = true;
+    });
+
     print("HomePage: Loading userId from SharedPreferences");
     SharedPreferences prefs = await SharedPreferences.getInstance();
     currentUserId = prefs.getString("userId");
 
     print("HomePage: Loaded userId: $currentUserId");
 
-    setState(() {});  // Update UI with userId
+    setState(() {
+      _isInitialLoading = false; // Initial loading complete
+    });
 
     if (currentUserId != null && currentUserId!.isNotEmpty) {
       print("HomePage: Fetching transactions for userId: $currentUserId");
-      controller.fetchTransactions(currentUserId!);
+      await controller.fetchTransactions(currentUserId!);
+      setState(() {
+        _isDataLoading = false;
+      });
     } else {
       print("HomePage: WARNING - User ID not found in shared preferences.");
 
@@ -52,13 +58,12 @@ class _HomePageState extends State<HomePage> {
       final firebaseUser = await FirebaseAuth.instance.currentUser;
       if (firebaseUser != null) {
         print("HomePage: User is logged in but userId not found in SharedPreferences. Email: ${firebaseUser.email}");
-        
+
         // Attempt to fetch userId from backend based on email
         await _tryFetchUserIdByEmail(firebaseUser.email ?? '');
       }
 
       // If userId is still not available, try to load it again after a short delay
-      // This handles race conditions with authentication
       if (currentUserId == null || currentUserId!.isEmpty) {
         await Future.delayed(Duration(milliseconds: 800), () async {
           prefs = await SharedPreferences.getInstance();
@@ -66,13 +71,19 @@ class _HomePageState extends State<HomePage> {
 
           print("HomePage: Retry loading userId: $currentUserId");
 
-          setState(() {});  // Update UI with userId
+          setState(() {});
 
           if (currentUserId != null && currentUserId!.isNotEmpty) {
             print("HomePage: Now fetching transactions after retry for userId: $currentUserId");
-            controller.fetchTransactions(currentUserId!);
+            await controller.fetchTransactions(currentUserId!);
+            setState(() {
+              _isDataLoading = false;
+            });
           } else {
             print("HomePage: CRITICAL - Still no userId after retry");
+            setState(() {
+              _isDataLoading = false;
+            });
             Get.snackbar(
               'Warning',
               'Could not identify your account. Please try signing out and signing in again.',
@@ -82,34 +93,35 @@ class _HomePageState extends State<HomePage> {
               duration: const Duration(seconds: 5),
               mainButton: TextButton(
                 onPressed: () {
-                  // Navigate to login page
-                  Get.offAllNamed('/login');
+                  Get.offNamed('/login');
                 },
                 child: Text('Sign In Again', style: TextStyle(color: Colors.white)),
               ),
             );
           }
         });
+      } else {
+        setState(() {
+          _isDataLoading = false;
+        });
       }
     }
   }
-  
+
   // Try to fetch userId from backend using email
   Future<void> _tryFetchUserIdByEmail(String email) async {
     if (email.isEmpty) return;
-    
+
     try {
       print("HomePage: Attempting to fetch userId for email: $email");
-      // Use the backend API to get all users
       final response = await http.get(
         Uri.parse('${dotenv.env['BASE_URL'] ?? 'http://localhost:5000'}/api/users/getAllUsers'),
         headers: {'Content-Type': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> users = json.decode(response.body);
-        
-        // Manually find user with matching email
+
         dynamic matchingUser;
         for (var user in users) {
           if (user['email'] == email) {
@@ -117,34 +129,37 @@ class _HomePageState extends State<HomePage> {
             break;
           }
         }
-        
+
         if (matchingUser != null && matchingUser['_id'] != null) {
           final userId = matchingUser['_id'];
           print("HomePage: Found userId $userId for email $email");
-          
-          // Store the userId in SharedPreferences
+
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString("userId", userId);
-          
-          // Update the current state
+
           setState(() {
             currentUserId = userId;
           });
-          
-          // Fetch transactions with the recovered userId
-          controller.fetchTransactions(userId);
+
+          await controller.fetchTransactions(userId);
+          setState(() {
+            _isDataLoading = false;
+          });
           return;
         }
       }
-      
+
       print("HomePage: Could not find userId for email: $email");
     } catch (e) {
       print("HomePage: Error fetching userId by email: $e");
     }
+
+    setState(() {
+      _isDataLoading = false;
+    });
   }
 
-
-  Future<String?> getUserId() async{
+  Future<String?> getUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString("userId");
   }
@@ -166,7 +181,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             content: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Date Filter
@@ -180,16 +195,16 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
                 ...controller.dateFilterOptions
                     .map((option) => RadioListTile<String>(
-                          title: Text(option['label']!),
-                          value: option['value']!,
-                          groupValue: controller.selectedDateFilter.value,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              controller.selectedDateFilter.value = value ?? '';
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                        )),
+                  title: Text(option['label']!),
+                  value: option['value']!,
+                  groupValue: controller.selectedDateFilter.value,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      controller.selectedDateFilter.value = value ?? '';
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                )),
 
                 const SizedBox(height: 16),
 
@@ -204,44 +219,68 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
                 ...controller.typeFilterOptions
                     .map((option) => RadioListTile<String>(
-                          title: Text(option['label']!),
-                          value: option['value']!,
-                          groupValue: controller.selectedTypeFilter.value,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              controller.selectedTypeFilter.value = value ?? '';
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                        )),
+                  title: Text(option['label']!),
+                  value: option['value']!,
+                  groupValue: controller.selectedTypeFilter.value,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      controller.selectedTypeFilter.value = value ?? '';
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                )),
               ],
             ),
             actions: [
-              TextButton(
-                onPressed: () {
-                  Get.back();
-                  controller.clearFilters();
-                },
-                child: const Text('Clear All'),
-              ),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Get.back();
-                  controller.applyFilters();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Get.back();
+                            controller.clearFilters();
+                          },
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(1)
+                          ),
+                          child: const Text('Clear All'),
+                        ),
+                        SizedBox(height: 4,),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(1)
+                          ),
+                          onPressed: () => Get.back(),
+                          child: const Text('Cancel'),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Container(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Get.back();
+                            controller.applyFilters();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Apply Filters'),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Text('Apply Filters'),
-              ),
+              )
             ],
           );
         },
@@ -289,12 +328,12 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 4),
                 Obx(() => Text(
-                      controller.getFilterDescription(),
-                      style: TextStyle(
-                        color: isDark ? Colors.white70 : Colors.black54,
-                        fontSize: 12,
-                      ),
-                    )),
+                  controller.getFilterDescription(),
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    fontSize: 12,
+                  ),
+                )),
               ],
             ),
           ),
@@ -340,124 +379,155 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Show initial loading screen when coming from sign-up
+    if (_isInitialLoading) {
+      return _buildInitialLoadingScreen(context);
+    }
+
     return Scaffold(
-      backgroundColor:
-      isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: _buildModernAppBar(context),
-      body: Obx(() {
-        final txs = controller.transactions;
-        final totalSpend =
-        txs.where((e) => e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
-        final totalIncome = txs
-            .where((e) => !e.isExpense)
-            .fold(0.0, (sum, e) => sum + e.amount);
-        final balance = totalIncome - totalSpend;
+      body: Stack(
+        children: [
+          Obx(() {
+            final txs = controller.transactions;
+            final totalSpend = txs.where((e) => e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
+            final totalIncome = txs.where((e) => !e.isExpense).fold(0.0, (sum, e) => sum + e.amount);
+            final balance = totalIncome - totalSpend;
 
-        return Obx(() {
-          final txsToShow = controller.displayTransactions;
+            return Obx(() {
+              final txsToShow = controller.displayTransactions;
 
-          if (txsToShow.isEmpty) {
-            // When empty, keep the old structure for better UX
-            return Column(
-              children: [
-                _buildBalanceCard(context, totalSpend, totalIncome, balance),
-                controller.hasActiveFilters
-                    ? _buildFilterSummary(context)
-                    : const SizedBox.shrink(),
-                _buildQuickActions(context),
-                Expanded(
-                  child: _buildEmptyState(context, controller.hasActiveFilters),
-                ),
-              ],
-            );
-          }
+              if (txsToShow.isEmpty && !_isDataLoading) {
+                return Column(
+                  children: [
+                    _buildBalanceCard(context, totalSpend, totalIncome, balance),
+                    controller.hasActiveFilters
+                        ? _buildFilterSummary(context)
+                        : const SizedBox.shrink(),
+                    _buildQuickActions(context),
+                    Expanded(
+                      child: _buildEmptyState(context, controller.hasActiveFilters),
+                    ),
+                  ],
+                );
+              }
 
-          final grouped = _groupTransactionsByDate(txsToShow);
-          final sortedKeys = grouped.keys.toList()
-            ..sort((a, b) => b.compareTo(a));
+              final grouped = _groupTransactionsByDate(txsToShow);
+              final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
-          // Create a custom scroll view that includes everything
-          return CustomScrollView(
-            slivers: [
-              // Balance card as a sliver
-              SliverToBoxAdapter(
-                child: _buildBalanceCard(context, totalSpend, totalIncome, balance),
-              ),
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildBalanceCard(context, totalSpend, totalIncome, balance),
+                  ),
+                  SliverToBoxAdapter(
+                    child: controller.hasActiveFilters
+                        ? _buildFilterSummary(context)
+                        : const SizedBox.shrink(),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildQuickActions(context),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 8),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                        final dateKey = sortedKeys[index];
+                        final txList = grouped[dateKey]!;
+                        final dailyIncome = txList
+                            .where((tx) => !tx.isExpense)
+                            .fold(0.0, (sum, tx) => sum + tx.amount);
+                        final dailyExpenses = txList
+                            .where((tx) => tx.isExpense)
+                            .fold(0.0, (sum, tx) => sum + tx.amount);
 
-              // Filter summary as a sliver
-              SliverToBoxAdapter(
-                child: controller.hasActiveFilters
-                    ? _buildFilterSummary(context)
-                    : const SizedBox.shrink(),
-              ),
-
-              // Quick actions as a sliver
-              SliverToBoxAdapter(
-                child: _buildQuickActions(context),
-              ),
-
-              // Add some spacing
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 8),
-              ),
-
-              // Transaction list as a sliver list
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    final dateKey = sortedKeys[index];
-                    final txList = grouped[dateKey]!;
-                    final dailyIncome = txList
-                        .where((tx) => !tx.isExpense)
-                        .fold(0.0, (sum, tx) => sum + tx.amount);
-                    final dailyExpenses = txList
-                        .where((tx) => tx.isExpense)
-                        .fold(0.0, (sum, tx) => sum + tx.amount);
-
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withOpacity(0.03)
-                            : Colors.grey.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white.withOpacity(0.08)
-                              : Colors.grey.withOpacity(0.15),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDateHeader(
-                              context, dateKey, dailyIncome, dailyExpenses,
-                              containerized: true),
-                          const SizedBox(height: 8),
-                          ...txList.map((tx) => _ModernTransactionCard(
-                            tx: tx,
-                            onDelete: () => _showDeleteDialog(context, tx),
-                          )),
-                        ],
-                      ),
-                    );
-                  },
-                  childCount: sortedKeys.length,
-                ),
-              ),
-
-              // Bottom padding
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 100), // Extra space for FAB and bottom nav
-              ),
-            ],
-          );
-        });
-      }),
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white.withOpacity(0.03)
+                                : Colors.grey.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withOpacity(0.08)
+                                  : Colors.grey.withOpacity(0.15),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildDateHeader(
+                                  context, dateKey, dailyIncome, dailyExpenses,
+                                  containerized: true),
+                              const SizedBox(height: 8),
+                              ...txList.map((tx) => _ModernTransactionCard(
+                                tx: tx,
+                                onDelete: () => _showDeleteDialog(context, tx),
+                              )),
+                            ],
+                          ),
+                        );
+                      },
+                      childCount: sortedKeys.length,
+                    ),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 100),
+                  ),
+                ],
+              );
+            });
+          }),
+          // Data loading overlay
+          if (_isDataLoading)
+            _buildDataLoadingOverlay(context),
+        ],
+      ),
       floatingActionButton: _buildModernFAB(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _buildModernBottomNav(context),
+    );
+  }
+
+  // Initial loading screen for when user comes from sign-up
+  Widget _buildInitialLoadingScreen(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      body: Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            theme.colorScheme.primary,
+          ),
+          strokeWidth: 3,
+        ),
+      ),
+    );
+  }
+
+  // Data loading overlay for when fetching transactions
+  Widget _buildDataLoadingOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      color: isDark
+          ? Colors.black.withOpacity(1)
+          : Colors.white.withOpacity(1),
+      child: Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            theme.colorScheme.primary,
+          ),
+        ),
+      ),
     );
   }
 
@@ -515,50 +585,50 @@ class _HomePageState extends State<HomePage> {
               ),
               actions: [
                 Obx(() => Stack(
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(right: 16),
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.filter_list,
+                          color: isDark ? Colors.white : Colors.black54,
+                        ),
+                        onPressed: () => _showFilterDialog(),
+                      ),
+                    ),
+                    if (controller.hasActiveFilters)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withOpacity(0.1)
-                                : Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.filter_list,
-                              color: isDark ? Colors.white : Colors.black54,
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '${controller.activeFiltersCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
-                            onPressed: () => _showFilterDialog(),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                        if (controller.hasActiveFilters)
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                '${controller.activeFiltersCount}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
-                    )),
+                      ),
+                  ],
+                )),
               ],
             ),
           ),
@@ -570,9 +640,10 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBalanceItem(BuildContext context, String label, String amount,
       IconData icon, Color color, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -580,12 +651,13 @@ class _HomePageState extends State<HomePage> {
               color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 18), // Slightly bigger icon
+            child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 12),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.max,
               children: [
                 Text(
                   label,
@@ -593,7 +665,7 @@ class _HomePageState extends State<HomePage> {
                     color: isDark
                         ? Colors.white.withOpacity(0.8)
                         : Colors.black.withOpacity(0.6),
-                    fontSize: 13, // Slightly bigger label font
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -601,10 +673,11 @@ class _HomePageState extends State<HomePage> {
                   amount,
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black87,
-                    fontSize: 18, // Bigger amount font (was 16)
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    overflow: TextOverflow.ellipsis
                   ),
-                  overflow: TextOverflow.ellipsis,
+
                 ),
               ],
             ),
@@ -614,7 +687,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // New compact balance card
   Widget _buildBalanceCard(BuildContext context, double totalSpend,
       double totalIncome, double balance) {
     final theme = Theme.of(context);
@@ -626,22 +698,20 @@ class _HomePageState extends State<HomePage> {
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            // Changed background color - more subtle and modern
             gradient: LinearGradient(
               colors: isDark
                   ? [
-                      const Color(0xFF2D3748),
-                      const Color(0xFF4A5568),
-                    ]
+                const Color(0xFF2D3748),
+                const Color(0xFF4A5568),
+              ]
                   : [
-                      const Color(0xFFEDF2F7),
-                      const Color(0xFFE2E8F0),
-                    ],
+                const Color(0xFFEDF2F7),
+                const Color(0xFFE2E8F0),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(12),
-            // Added semi-transparent border
             border: Border.all(
               color: isDark
                   ? Colors.white.withOpacity(0.15)
@@ -672,7 +742,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 8),
               Text(
-                '₹${balance.toStringAsFixed(0)}',
+                '₹${balance.toStringAsFixed(2)}',
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black87,
                   fontSize: 32,
@@ -686,7 +756,7 @@ class _HomePageState extends State<HomePage> {
                     child: _buildBalanceItem(
                       context,
                       'Income',
-                      '₹${totalIncome.toStringAsFixed(0)}',
+                      '₹${totalIncome.toStringAsFixed(2)}',
                       Icons.trending_up,
                       Colors.green,
                       isDark,
@@ -703,7 +773,7 @@ class _HomePageState extends State<HomePage> {
                     child: _buildBalanceItem(
                       context,
                       'Expenses',
-                      '₹${totalSpend.toStringAsFixed(0)}',
+                      '₹${totalSpend.toStringAsFixed(2)}',
                       Icons.trending_down,
                       Colors.red,
                       isDark,
@@ -724,8 +794,7 @@ class _HomePageState extends State<HomePage> {
               margin: const EdgeInsets.all(8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color:
-                    Theme.of(context).colorScheme.onBackground.withOpacity(0.9),
+                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.9),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(50),
                   bottomRight: Radius.circular(8),
@@ -751,55 +820,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCompactBalanceItem(BuildContext context, String label,
-      String amount, IconData icon, Color color) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, color: color, size: 14),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.black54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  amount,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black87,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildQuickActions(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -814,7 +834,7 @@ class _HomePageState extends State<HomePage> {
               'Add Income',
               Icons.add,
               Colors.green,
-              () => _navigateToAddTransaction(context, false),
+                  () => _navigateToAddTransaction(context, false),
             ),
           ),
           const SizedBox(width: 12),
@@ -824,7 +844,7 @@ class _HomePageState extends State<HomePage> {
               'Add Expense',
               Icons.remove,
               Colors.red,
-              () => _navigateToAddTransaction(context, true),
+                  () => _navigateToAddTransaction(context, true),
             ),
           ),
         ],
@@ -850,8 +870,7 @@ class _HomePageState extends State<HomePage> {
           ),
           boxShadow: [
             BoxShadow(
-              color:
-                  isDark ? Colors.transparent : Colors.black.withOpacity(0.05),
+              color: isDark ? Colors.transparent : Colors.black.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -938,53 +957,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildTransactionsList(BuildContext context,
-      Map<String, List<TransactionModel>> grouped, List<String> sortedKeys) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sortedKeys.length,
-      itemBuilder: (context, idx) {
-        final dateKey = sortedKeys[idx];
-        final txList = grouped[dateKey]!;
-        final dailyIncome = txList
-            .where((tx) => !tx.isExpense)
-            .fold(0.0, (sum, tx) => sum + tx.amount);
-        final dailyExpenses = txList
-            .where((tx) => tx.isExpense)
-            .fold(0.0, (sum, tx) => sum + tx.amount);
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.03)
-                : Colors.grey.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.grey.withOpacity(0.15),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDateHeader(context, dateKey, dailyIncome, dailyExpenses,
-                  containerized: true),
-              const SizedBox(height: 8),
-              ...txList.map((tx) => _ModernTransactionCard(
-                    tx: tx,
-                    onDelete: () => _showDeleteDialog(context, tx),
-                  )),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Update _buildDateHeader to optionally remove its own container styling
   Widget _buildDateHeader(
       BuildContext context, String dateKey, double income, double expenses,
       {bool containerized = false}) {
@@ -992,7 +964,6 @@ class _HomePageState extends State<HomePage> {
     final isDark = theme.brightness == Brightness.dark;
 
     if (containerized) {
-      // Just return the row, no container
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1032,7 +1003,6 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // Original container style for non-containerized usage
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -1089,8 +1059,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Delete Transaction'),
           content: Text(
               'Are you sure you want to delete this ${tx.isExpense ? 'expense' : 'income'} of ₹${tx.amount.toStringAsFixed(2)}?'),
@@ -1121,7 +1090,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF667eea).withOpacity(0.2),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -1150,7 +1119,7 @@ class _HomePageState extends State<HomePage> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
-          height: 90, // Increased height to prevent overflow
+          height: 90,
           decoration: BoxDecoration(
             color: isDark
                 ? theme.colorScheme.surface.withOpacity(0.7)
@@ -1176,8 +1145,8 @@ class _HomePageState extends State<HomePage> {
             color: Colors.transparent,
             shape: const CircularNotchedRectangle(),
             notchMargin: 12,
-            height: 90, // Match container height
-            padding: EdgeInsets.zero, // Remove default padding
+            height: 90,
+            padding: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -1189,9 +1158,7 @@ class _HomePageState extends State<HomePage> {
                     label: 'Dashboard',
                     isActive: true,
                     theme: theme,
-                    onTap: () {
-
-                    },
+                    onTap: () {},
                   ),
                   _ModernBottomNavItem(
                     icon: Icons.analytics_outlined,
@@ -1200,10 +1167,10 @@ class _HomePageState extends State<HomePage> {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/analysis');
+                      Get.offNamed('/analysis');
                     },
                   ),
-                  const SizedBox(width: 48), // Space for FAB
+                  const SizedBox(width: 48),
                   _ModernBottomNavItem(
                     icon: Icons.flag_outlined,
                     activeIcon: Icons.flag_rounded,
@@ -1211,7 +1178,7 @@ class _HomePageState extends State<HomePage> {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/goals');
+                      Get.offNamed('/goals');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -1221,7 +1188,7 @@ class _HomePageState extends State<HomePage> {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/user-profile');
+                      Get.offNamed('/user-profile');
                     },
                   ),
                 ],
@@ -1310,7 +1277,7 @@ class _ModernTransactionCard extends StatelessWidget {
             _getCategoryIcon(tx.category),
             color: tx.isExpense
                 ? Colors.red.withOpacity(0.7)
-                : Colors.green.withOpacity(0.1),
+                : Colors.green.withOpacity(0.7),
             size: 24,
           ),
         ),
@@ -1379,7 +1346,6 @@ class _ModernBottomNavItem extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Using your app theme colors
     final activeColor = theme.colorScheme.primary;
     final inactiveColor = theme.colorScheme.onSurface.withOpacity(0.6);
     final backgroundColor = isActive
@@ -1394,8 +1360,7 @@ class _ModernBottomNavItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          margin: const EdgeInsets.symmetric(
-              horizontal: 2), // Small margin to prevent overflow
+          margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(16),
@@ -1411,19 +1376,19 @@ class _ModernBottomNavItem extends StatelessWidget {
               Icon(
                 isActive ? (activeIcon ?? icon) : icon,
                 color: isActive ? activeColor : inactiveColor,
-                size: 22, // Slightly smaller to prevent overflow
+                size: 22,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10, // Smaller font size to prevent overflow
+                  fontSize: 10,
                   color: isActive ? activeColor : inactiveColor,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis, // Prevent text overflow
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

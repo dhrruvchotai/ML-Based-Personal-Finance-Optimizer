@@ -96,71 +96,80 @@ ThemeData lightMode = ThemeData(
 ThemeData darkMode = ThemeData(
   brightness: Brightness.dark,
   colorScheme: const ColorScheme.dark(
-    // Main background - Deep charcoal for a sleek look
-    background: Color(0xFF1C2526),
-    // Surface - Dark gray for cards and inputs
-    surface: Color(0xFF2E3A3B),
-    // Primary brand color - Pastel blue for consistency
-    primary: Color(0xFF7AB2D3),
-    // Secondary accent - Pastel mint green
-    secondary: Color(0xFFA8D5BA),
+    // Main background - Deep professional dark (0F172A)
+    // background: Color(0xFF0F0D15),
+    background: Color(0xFF121212),
+
+    // Surface colors - Layered dark surfaces (1E293B)
+    // surface: Color(0xFF1D1A26),
+    surface: Color(0xFF1E1E1E),
+
+    // Primary brand color - Bright teal for dark mode (14B8A6)  60A5FA {{3B82F6}}
+    // primary: Color(0xff1e95d4),
+    primary: Color(0xFF0079bf),
+
+    // Secondary accent - Vibrant orange
+    // secondary: Color(0xFFFB923C),
+    secondary: Color(0xFF71AFE5),
+
     // Text colors
-    onBackground: Color(0xFFEFF3F5),
-    onSurface: Color(0xFFB0C4D0),
+    onBackground: Color(0xFFF8FAFC),
+    onSurface: Color(0xFFCBD5E1),
+
     // Border and outline colors
-    outline: Color(0xFF5E7380),
+    outline: Color(0xFF475569),
+
     // Additional colors
-    tertiary: Color(0xFF3A4B4D),
-    onTertiary: Color(0xFFEFF3F5),
-    // Error colors - Soft coral for alerts
-    error: Color(0xFFFF9999),
-    onError: Color(0xFF2E3A3B),
-    // Success/positive colors - Soft green for goal progress
-    inversePrimary: Color(0xFFB2E4C9),
+    tertiary: Color(0xFF334155),
+    onTertiary: Color(0xFF94A3B8),
+
+    // Error colors
+    error: Color(0xFFF87171),
+    onError: Color(0xFF1F2937),
+
+    // Success/positive colors
+    inversePrimary: Color(0xFF10B981),
+
     // Additional semantic colors
-    surfaceVariant: Color(0xFF4A5B66),
-    onSurfaceVariant: Color(0xFFB0C4D0),
-    primaryContainer: Color(0xFF1A3C4E),
-    onPrimaryContainer: Color(0xFFD6E8F2),
+    surfaceVariant: Color(0xFF475569),
+    onSurfaceVariant: Color(0xFF94A3B8),
+    primaryContainer: Color(0xFF134E4A),
+    onPrimaryContainer: Color(0xFFCCFDF7),
   ),
+
   // Card theme
   cardTheme: const CardThemeData(
-    elevation: 2,
-    color: Color(0xFF2E3A3B),
+    elevation: 0,
+    color: Color(0xFF1E293B),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
   ),
+
   // Elevated button theme
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       elevation: 0,
-      backgroundColor: Color(0xFF7AB2D3), // Pastel blue for buttons
-      foregroundColor: Color(0xFFEFF3F5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
     ),
   ),
+
   // Input decoration theme
   inputDecorationTheme: InputDecorationTheme(
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF5E7380)),
+      borderSide: const BorderSide(color: Color(0xFF475569)),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF5E7380)),
+      borderSide: const BorderSide(color: Color(0xFF475569)),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFF7AB2D3), width: 2),
+      borderSide: const BorderSide(color: Color(0xFF14B8A6), width: 2),
     ),
-  ),
-  // Typography
-  textTheme: const TextTheme(
-    headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFEFF3F5)),
-    bodyMedium: TextStyle(fontSize: 14, color: Color(0xFFB0C4D0)),
   ),
 );
 

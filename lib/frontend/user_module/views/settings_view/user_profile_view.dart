@@ -1,12 +1,15 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/controllers/theme_controller/theme_controller.dart';
 import '../../controllers/user_profile_controller.dart';
 
 class UserProfileView extends StatelessWidget {
   UserProfileView({Key? key}) : super(key: key);
 
   final UserProfileController controller = Get.put(UserProfileController());
+  final ThemeController themeController = Get.find<ThemeController>();
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -24,43 +27,52 @@ class UserProfileView extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: Theme.of(context).colorScheme.onBackground,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         actions: [
+          // Theme Toggle Button
+          IconButton(
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            onPressed: () {
+              // Toggle theme
+              themeController.toggleTheme();
+            },
+          ),
           Obx(() => controller.isEditing.value
               ? IconButton(
-                  icon: Icon(
-                    Icons.check,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      controller.saveUserData();
-                    }
-                  },
-                )
+            icon: Icon(
+              Icons.check,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                controller.saveUserData();
+              }
+            },
+          )
               : IconButton(
-                  icon: Icon(
-                    Icons.edit,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  onPressed: controller.toggleEditingMode,
-                )),
+            icon: Icon(
+              Icons.edit,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            onPressed: controller.toggleEditingMode,
+          )),
         ],
       ),
-      floatingActionButton: FloatingActionButton(child: Icon(Icons.chat),onPressed:() {
-        Get.toNamed('/chatbot');
-      },),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.chat),
+        onPressed: () {
+          Get.offNamed('/chatbot');
+        },
+      ),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Form(
@@ -71,7 +83,9 @@ class UserProfileView extends StatelessWidget {
                 // Profile Image
                 _buildProfileImageSection(context),
                 const SizedBox(height: 30),
-                
+
+                // Theme Settings Card
+
                 // Profile Details Card
                 Card(
                   elevation: 2,
@@ -92,7 +106,7 @@ class UserProfileView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        
+
                         // Username Field
                         _buildTextField(
                           controller: controller.usernameController,
@@ -102,7 +116,7 @@ class UserProfileView extends StatelessWidget {
                           context: context,
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Email Field
                         _buildTextField(
                           controller: controller.emailController,
@@ -114,7 +128,7 @@ class UserProfileView extends StatelessWidget {
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Phone Field
                         _buildTextField(
                           controller: controller.phoneController,
@@ -125,66 +139,66 @@ class UserProfileView extends StatelessWidget {
                           validator: controller.validatePhone,
                           keyboardType: TextInputType.phone,
                         ),
-                        
+
                         // Account Status
                         Obx(() => controller.user.value.isBlocked != null
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 16.0),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    controller.user.value.isBlocked! 
-                                      ? Icons.block 
-                                      : Icons.check_circle,
-                                    color: controller.user.value.isBlocked! 
-                                      ? Colors.red 
-                                      : Colors.green,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Account Status: ${controller.user.value.isBlocked! ? 'Blocked' : 'Active'}',
-                                    style: TextStyle(
-                                      color: controller.user.value.isBlocked! 
-                                        ? Colors.red 
-                                        : Colors.green,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                            ? Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                controller.user.value.isBlocked!
+                                    ? Icons.block
+                                    : Icons.check_circle,
+                                color: controller.user.value.isBlocked!
+                                    ? Colors.red
+                                    : Colors.green,
+                                size: 18,
                               ),
-                            )
-                          : const SizedBox.shrink()),
-                        
+                              const SizedBox(width: 8),
+                              Text(
+                                'Account Status: ${controller.user.value.isBlocked! ? 'Blocked' : 'Active'}',
+                                style: TextStyle(
+                                  color: controller.user.value.isBlocked!
+                                      ? Colors.red
+                                      : Colors.green,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                            : const SizedBox.shrink()),
+
                         // Account Creation Date
                         Obx(() => controller.user.value.createdAt != null
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 16.0),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Account Created: ${_formatDate(controller.user.value.createdAt!)}',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                            ? Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 18,
                               ),
-                            )
-                          : const SizedBox.shrink()),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Account Created: ${_formatDate(controller.user.value.createdAt!)}',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                            : const SizedBox.shrink()),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Edit/Save Button
                 if (controller.isEditing.value)
                   TextButton(
@@ -194,58 +208,253 @@ class UserProfileView extends StatelessWidget {
                     ),
                     child: const Text('Cancel'),
                   ),
+
+                const SizedBox(height: 1),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'App Settings',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onBackground,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Theme Toggle Button
+                        _buildThemeButton(context),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         );
       }),
+      bottomNavigationBar: _buildModernBottomNav(context),
     );
   }
 
-  // Profile Image Section
+  // Theme Button Widget
+  Widget _buildThemeButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              isDark ? Icons.dark_mode : Icons.light_mode,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Theme',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onBackground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isDark ? 'Dark mode enabled' : 'Light mode enabled',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              themeController.toggleTheme();
+            },
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+              size: 18,
+            ),
+            label: Text(isDark ? 'Light' : 'Dark'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Rest of your existing methods remain the same...
+  Widget _buildModernBottomNav(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          height: 80,
+          decoration: BoxDecoration(
+            color: isDark
+                ? theme.colorScheme.surface.withOpacity(0.7)
+                : Colors.white.withOpacity(0.8),
+            border: Border(
+              top: BorderSide(
+                color: theme.colorScheme.outline.withOpacity(0.3),
+                width: 0.5,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: BottomAppBar(
+            elevation: 0,
+            color: Colors.transparent,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 12,
+            height: 90,
+            padding: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _ModernBottomNavItem(
+                    icon: Icons.dashboard_outlined,
+                    activeIcon: Icons.dashboard_rounded,
+                    label: 'Dashboard',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {
+                      Get.offNamed('/homePage');
+                    },
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.analytics_outlined,
+                    activeIcon: Icons.analytics_rounded,
+                    label: 'Analytics',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {
+                      Get.offNamed('/analysis');
+                    },
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.flag_outlined,
+                    activeIcon: Icons.flag_rounded,
+                    label: 'Goals',
+                    isActive: false,
+                    theme: theme,
+                    onTap: () {
+                      Get.offNamed('/goals');
+                    },
+                  ),
+                  _ModernBottomNavItem(
+                    icon: Icons.settings_outlined,
+                    activeIcon: Icons.settings_rounded,
+                    label: 'Settings',
+                    isActive: true,
+                    theme: theme,
+                    onTap: () {
+                      Get.offNamed('/user-profile');
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileImageSection(BuildContext context) {
     return Column(
       children: [
         Obx(() {
           return Stack(
             children: [
-              // Profile Image
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
+              GestureDetector(
+                onTap: controller.pickImage,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
                     ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: controller.selectedImage.value != null
-                      ? Image.file(
-                          controller.selectedImage.value!,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                        )
-                      : Container(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
-                          child: Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: controller.selectedImage.value != null
+                        ? Image.file(
+                      controller.selectedImage.value!,
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    )
+                        : Container(
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      child: Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              // Edit Image Button
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -294,7 +503,6 @@ class UserProfileView extends StatelessWidget {
     );
   }
 
-  // Text Field Widget
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -342,9 +550,82 @@ class UserProfileView extends StatelessWidget {
       ),
     );
   }
-  
-  // Helper method to format date
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class _ModernBottomNavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData? activeIcon;
+  final String label;
+  final bool isActive;
+  final ThemeData theme;
+  final VoidCallback onTap;
+
+  const _ModernBottomNavItem({
+    required this.icon,
+    this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.theme,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.colorScheme.onSurface.withOpacity(0.6);
+    final backgroundColor = isActive
+        ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+        : Colors.transparent;
+    final borderColor = isActive
+        ? theme.colorScheme.primary.withOpacity(0.4)
+        : Colors.transparent;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: borderColor,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isActive ? (activeIcon ?? icon) : icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 22,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive ? activeColor : inactiveColor,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
