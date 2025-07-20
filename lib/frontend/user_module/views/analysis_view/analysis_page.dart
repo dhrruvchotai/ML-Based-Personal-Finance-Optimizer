@@ -675,10 +675,10 @@ class AnalysisPage extends StatelessWidget {
 
   Widget _buildMonthlyTrendsChart(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     // Get real data from controller
     final List<MonthlyTrendsData> monthlyData = controller.getMonthlyTrendsData();
-    
+
     if (monthlyData.isEmpty) {
       return _buildEmptyChart(context, 'Monthly Trends');
     }
@@ -803,7 +803,7 @@ class AnalysisPage extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Add summary stats
             if (monthlyData.isNotEmpty)
               Padding(
@@ -815,21 +815,21 @@ class AnalysisPage extends StatelessWidget {
       ),
     );
   }
-  
+
   // Helper widget to show summary of monthly trends
   Widget _buildMonthlySummary(BuildContext context, List<MonthlyTrendsData> data) {
     final theme = Theme.of(context);
-    
+
     // Calculate average income and expense
     final avgIncome = data.fold(0.0, (sum, item) => sum + item.income) / data.length;
     final avgExpense = data.fold(0.0, (sum, item) => sum + item.expense) / data.length;
-    
+
     // Find highest income and expense month
-    final highestIncome = data.reduce((curr, next) => 
+    final highestIncome = data.reduce((curr, next) =>
         curr.income > next.income ? curr : next);
-    final highestExpense = data.reduce((curr, next) => 
+    final highestExpense = data.reduce((curr, next) =>
         curr.expense > next.expense ? curr : next);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -872,11 +872,11 @@ class AnalysisPage extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildSummaryRow(
-    BuildContext context, 
-    String label, 
-    String value, 
+    BuildContext context,
+    String label,
+    String value,
     {required IconData icon, required Color color}
   ) {
     final theme = Theme.of(context);

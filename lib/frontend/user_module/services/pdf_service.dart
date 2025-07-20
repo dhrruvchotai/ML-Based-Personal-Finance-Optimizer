@@ -50,7 +50,7 @@ class PdfService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'FinanceTracker App',
+                    'Xpense App',
                     style: pw.TextStyle(
                       fontSize: 12,
                       fontWeight: pw.FontWeight.bold,
@@ -157,14 +157,17 @@ class PdfService {
         final responseData = json.decode(response.body);
         final userEmail = responseData['user']['email'];
         final filePath = responseData['file']['filePath'];
+        final downloadUrl = responseData['file']['downloadUrl'];
         
         print("User email from response: $userEmail");
         print("File path from response: $filePath");
+        print("Download URL: $downloadUrl");
         
         return {
           'success': true,
           'email': userEmail,
           'filePath': filePath,
+          'downloadUrl': downloadUrl,
           'response': responseData
         };
       } else {

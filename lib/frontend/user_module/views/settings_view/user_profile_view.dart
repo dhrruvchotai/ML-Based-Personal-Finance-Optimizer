@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/controllers/theme_controller/theme_controller.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/services/notification_service.dart';
 import '../../models/transaction_model.dart';
@@ -13,8 +14,10 @@ class UserProfileView extends StatelessWidget {
 
   final UserProfileController controller = Get.put(UserProfileController());
   final ThemeController themeController = Get.find<ThemeController>();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final _formKey = GlobalKey<FormState>();
+  static final _formKey = GlobalKey<FormState>(); // Made static to avoid GlobalKey conflicts
+
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +43,6 @@ class UserProfileView extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             onPressed: () {
-              // Toggle theme
               themeController.toggleTheme();
             },
           ),
@@ -68,7 +70,7 @@ class UserProfileView extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.chat),
         onPressed: () {
-          Get.offNamed('/chatbot');
+          Get.toNamed('/chatbot');
         },
       ),
       body: Obx(() {
@@ -86,8 +88,6 @@ class UserProfileView extends StatelessWidget {
                 // Profile Image
                 _buildProfileImageSection(context),
                 const SizedBox(height: 30),
-
-                // Theme Settings Card
 
                 // Profile Details Card
                 Card(
@@ -212,7 +212,7 @@ class UserProfileView extends StatelessWidget {
                     child: const Text('Cancel'),
                   ),
 
-                const SizedBox(height: 1),
+                // App Settings Card
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -317,6 +317,10 @@ class UserProfileView extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                const SizedBox(height: 100), // Extra space for bottom navigation
               ],
             ),
           ),
@@ -326,7 +330,100 @@ class UserProfileView extends StatelessWidget {
     );
   }
 
-  // Theme Button Widget
+  // Show Logout Confirmation Dialog
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.logout,
+                color: Colors.red.shade600,
+              ),
+              const SizedBox(width: 8),
+              const Text('Logout'),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to logout? You will need to sign in again to access your account.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Get.offAllNamed('/signup');
+                _performLogout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Perform Logout Operation
+  Future _performLogout() async {
+    try {
+      // Show loading dialog
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      // Clear SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // Sign out from Firebase
+      await FirebaseAuth.instance.signOut();
+
+      // Close loading dialog
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      // Clear GetX controllers AFTER navigation
+      Get.deleteAll();
+
+      // Navigate to login page and clear all previous routes
+      Get.offAllNamed('/login'); // Use /login instead of /signup
+
+      // Show success message
+      Get.snackbar(
+        'Success',
+        'You have been logged out successfully',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      // Error handling...
+    }
+  }
+
+
+  // Theme Button Widget (existing code)
   Widget _buildThemeButton(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
