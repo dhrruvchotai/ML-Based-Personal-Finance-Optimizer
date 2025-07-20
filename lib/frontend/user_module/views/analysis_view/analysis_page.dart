@@ -27,7 +27,6 @@ class AnalysisPage extends StatelessWidget {
           ),
         ),
         elevation: 0,
-        centerTitle: true,
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
         actions: [
@@ -419,7 +418,7 @@ class AnalysisPage extends StatelessWidget {
       color: theme.colorScheme.surface,
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.only(bottom: 12,right: 7,left: 7,top: 12),
         child: Column(
           children: [
             Text(
@@ -445,7 +444,8 @@ class AnalysisPage extends StatelessWidget {
                   PieSeries<ChartData, String>(
                     dataSource: chartData,
                     xValueMapper: (ChartData data, _) => data.category,
-                    yValueMapper: (ChartData data, _) => data.amount,
+                  yValueMapper: (ChartData data, _) => double.parse(((data.amount / total) * 100).toStringAsFixed(1)),
+                  dataLabelMapper: (ChartData data, _) => '${((data.amount / total) * 100).toStringAsFixed(1)}%',
                     pointColorMapper: (ChartData data, _) => data.color,
                     dataLabelSettings: const DataLabelSettings(
                       isVisible: true,
@@ -457,7 +457,7 @@ class AnalysisPage extends StatelessWidget {
                       labelIntersectAction: LabelIntersectAction.shift,
                       useSeriesColor: true,
                     ),
-                    radius: '80%',
+                    radius: '75%',
                     explode: true,
                     explodeIndex: 0,
                     explodeOffset: '10%',

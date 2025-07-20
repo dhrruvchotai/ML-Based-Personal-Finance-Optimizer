@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: '/homePage',
           page: () => HomePage(),
-          transition: Transition.downToUp,
+          transition: Transition.rightToLeft,
     transitionDuration: Duration(milliseconds: 300),
         ),
         GetPage(
