@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-
 import '../../controllers/analysis_controller.dart';
+import '../../services/pdf_service.dart';
+import 'dart:io';
 
 class AnalysisPage extends StatelessWidget {
   final AnalysisController controller = Get.put(AnalysisController());
@@ -46,7 +47,7 @@ class AnalysisPage extends StatelessWidget {
                   color: theme.colorScheme.primary,
                 ),
                 tooltip: 'Download PDF Report',
-                onPressed: controller.generatePdfReport,
+                onPressed: () => controller.generatePdfReport(),
               )
           ),
         ],
