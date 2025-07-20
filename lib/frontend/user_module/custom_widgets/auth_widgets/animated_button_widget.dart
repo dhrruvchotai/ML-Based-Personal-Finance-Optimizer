@@ -53,7 +53,7 @@ class _AnimatedSignInButtonState extends State<AnimatedSignInButton> with Single
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.blue,
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(12),
           ),
           width: double.infinity,

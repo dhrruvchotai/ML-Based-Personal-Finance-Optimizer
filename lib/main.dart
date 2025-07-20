@@ -21,7 +21,6 @@ void main() async{
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  Get.put(TransactionController());
   runApp(const MyApp());
 }
 
@@ -32,6 +31,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeController = Get.put(ThemeController());
+    Get.put(TransactionController());
     return GetMaterialApp(
       title: 'Flutter Demo',
       theme: lightMode,

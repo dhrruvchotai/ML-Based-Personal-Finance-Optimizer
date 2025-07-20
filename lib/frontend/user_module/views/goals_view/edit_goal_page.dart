@@ -22,7 +22,8 @@ class EditGoalPage extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      backgroundColor:
+          isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           'Edit Goal',
@@ -31,6 +32,11 @@ class EditGoalPage extends StatelessWidget {
             fontSize: 24,
           ),
         ),
+        leading: IconButton(
+            onPressed: () {
+              Get.back();
+            },
+            icon: Icon(Icons.arrow_back_ios_rounded)),
         elevation: 0,
         centerTitle: false,
         backgroundColor: theme.colorScheme.primary,
@@ -77,7 +83,7 @@ class EditGoalPage extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 20),
-                
+
                 _buildSectionTitle('Target Amount'),
                 _buildTextField(
                   controller: controller.amountController,
@@ -110,7 +116,7 @@ class EditGoalPage extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 20),
-                
+
                 _buildSectionTitle('Start date'),
                 GestureDetector(
                   onTap: () => controller.selectStartDate(context),
@@ -123,7 +129,7 @@ class EditGoalPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 _buildSectionTitle('Target date'),
                 GestureDetector(
                   onTap: () => controller.selectEndDate(context),
@@ -142,7 +148,7 @@ class EditGoalPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 _buildSectionTitle('Description (Optional)'),
                 _buildTextField(
                   controller: controller.descriptionController,
@@ -150,7 +156,7 @@ class EditGoalPage extends StatelessWidget {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 40),
-                
+
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -167,11 +173,12 @@ class EditGoalPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: Colors.white
                       ),
                     ),
                   ),
                 ),
-                
+
                 // Show current saved amount
                 const SizedBox(height: 40),
                 _buildSectionTitle('Current Progress'),
@@ -210,7 +217,8 @@ class EditGoalPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
                           value: goal.progressPercentage / 100,
-                          backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                          backgroundColor:
+                              theme.colorScheme.primary.withOpacity(0.2),
                           valueColor: AlwaysStoppedAnimation<Color>(
                             theme.colorScheme.primary,
                           ),
@@ -279,4 +287,4 @@ class EditGoalPage extends StatelessWidget {
       validator: validator,
     );
   }
-} 
+}

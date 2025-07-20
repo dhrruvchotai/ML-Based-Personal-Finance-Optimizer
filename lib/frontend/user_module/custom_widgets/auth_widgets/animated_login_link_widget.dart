@@ -24,7 +24,7 @@ class SignInLoginLink extends StatelessWidget {
             TextSpan(text: text, style: const TextStyle(color: Colors.black54)),
             TextSpan(
               text: linkText,
-              style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Color(0xFF417FB1), fontWeight: FontWeight.bold),
             ),
           ],
         ),

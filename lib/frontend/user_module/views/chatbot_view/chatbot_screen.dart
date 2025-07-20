@@ -171,7 +171,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF6B7280), size: 18),
-                onPressed: () => Get.offAllNamed('/homePage'),
+                onPressed: () => Get.back(),
                 padding: EdgeInsets.zero,
               ),
             ),
