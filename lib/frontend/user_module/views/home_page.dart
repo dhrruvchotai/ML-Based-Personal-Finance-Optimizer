@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
               duration: const Duration(seconds: 5),
               mainButton: TextButton(
                 onPressed: () {
-                  Get.offAllNamed('/login');
+                  Get.offNamed('/login');
                 },
                 child: Text('Sign In Again', style: TextStyle(color: Colors.white)),
               ),
@@ -501,36 +501,12 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-              const Color(0xFF1A1A1A),
-              const Color(0xFF2A2A2A),
-              const Color(0xFF1A1A1A),
-            ]
-                : [
-              const Color(0xFFF8FAFC),
-              const Color(0xFFE2E8F0),
-              const Color(0xFFF8FAFC),
-            ],
+      body: Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            theme.colorScheme.primary,
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  theme.colorScheme.primary,
-                ),
-                strokeWidth: 3,
-              ),
-            ],
-          ),
+          strokeWidth: 3,
         ),
       ),
     );
@@ -543,45 +519,12 @@ class _HomePageState extends State<HomePage> {
 
     return Container(
       color: isDark
-          ? Colors.black.withOpacity(0.3)
-          : Colors.white.withOpacity(0.8),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.grey[900]?.withOpacity(0.9)
-                  : Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Loading transactions...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: isDark ? Colors.white : Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+          ? Colors.black.withOpacity(1)
+          : Colors.white.withOpacity(1),
+      child: Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(
+            theme.colorScheme.primary,
           ),
         ),
       ),
@@ -697,9 +640,10 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBalanceItem(BuildContext context, String label, String amount,
       IconData icon, Color color, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -713,6 +657,7 @@ class _HomePageState extends State<HomePage> {
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.max,
               children: [
                 Text(
                   label,
@@ -728,10 +673,11 @@ class _HomePageState extends State<HomePage> {
                   amount,
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black87,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    overflow: TextOverflow.ellipsis
                   ),
-                  overflow: TextOverflow.ellipsis,
+
                 ),
               ],
             ),
@@ -796,7 +742,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 8),
               Text(
-                '₹${balance.toStringAsFixed(0)}',
+                '₹${balance.toStringAsFixed(2)}',
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black87,
                   fontSize: 32,
@@ -810,7 +756,7 @@ class _HomePageState extends State<HomePage> {
                     child: _buildBalanceItem(
                       context,
                       'Income',
-                      '₹${totalIncome.toStringAsFixed(0)}',
+                      '₹${totalIncome.toStringAsFixed(2)}',
                       Icons.trending_up,
                       Colors.green,
                       isDark,
@@ -827,7 +773,7 @@ class _HomePageState extends State<HomePage> {
                     child: _buildBalanceItem(
                       context,
                       'Expenses',
-                      '₹${totalSpend.toStringAsFixed(0)}',
+                      '₹${totalSpend.toStringAsFixed(2)}',
                       Icons.trending_down,
                       Colors.red,
                       isDark,
@@ -1221,7 +1167,7 @@ class _HomePageState extends State<HomePage> {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/analysis');
+                      Get.offNamed('/analysis');
                     },
                   ),
                   const SizedBox(width: 48),
@@ -1232,7 +1178,7 @@ class _HomePageState extends State<HomePage> {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/goals');
+                      Get.offNamed('/goals');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -1242,7 +1188,7 @@ class _HomePageState extends State<HomePage> {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/user-profile');
+                      Get.offNamed('/user-profile');
                     },
                   ),
                 ],
@@ -1331,7 +1277,7 @@ class _ModernTransactionCard extends StatelessWidget {
             _getCategoryIcon(tx.category),
             color: tx.isExpense
                 ? Colors.red.withOpacity(0.7)
-                : Colors.green.withOpacity(0.1),
+                : Colors.green.withOpacity(0.7),
             size: 24,
           ),
         ),

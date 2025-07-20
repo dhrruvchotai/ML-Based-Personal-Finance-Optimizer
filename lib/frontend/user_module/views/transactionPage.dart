@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
 import 'dart:convert';
@@ -26,7 +31,7 @@ class AddTransactionPage extends StatefulWidget {
 class _AddTransactionPageState extends State<AddTransactionPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
@@ -35,21 +40,12 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   XFile? _selectedImage;
   String _responseText = '';
   bool _isUploading = false;
+  bool _hasProcessedReceipt = false; // Track if receipt was processed
 
-  // CATEGORIES:
-  // for income->allowance, award, bonus, dividend, investment, lottery, salary, tips, others
-  // for expense-> bills, clothing, education, entertainment, fitness, food, gifts, healthcare, home & furniture, pets, shopping, transportation & fuel, travel, other
-
+  // Categories and icons (your existing lists)
   final List<String> _categoriesIncome = [
-    'allowance',
-    'award',
-    'bonus',
-    'dividend',
-    'investment',
-    'lottery',
-    'salary',
-    'tips',
-    'others'
+    'allowance', 'award', 'bonus', 'dividend', 'investment',
+    'lottery', 'salary', 'tips', 'others'
   ];
 
   final List<String> _categoriesExpense = [
@@ -59,32 +55,16 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   ];
 
   final List<IconData> _categoryIconsIncome = [
-    Icons.wallet_giftcard,           // allowance
-    Icons.emoji_events,              // award
-    Icons.card_giftcard,             // bonus
-    Icons.stacked_line_chart,        // dividend
-    Icons.trending_up,               // investment
-    Icons.casino,                    // lottery
-    Icons.account_balance_wallet,    // salary
-    Icons.attach_money,              // tips
-    Icons.more_horiz,                // others
+    Icons.wallet_giftcard, Icons.emoji_events, Icons.card_giftcard,
+    Icons.stacked_line_chart, Icons.trending_up, Icons.casino,
+    Icons.account_balance_wallet, Icons.attach_money, Icons.more_horiz,
   ];
 
   final List<IconData> _categoryIconsExpense = [
-    Icons.receipt_long,           // bills
-    Icons.checkroom,              // clothing
-    Icons.school,                 // education
-    Icons.movie,                  // entertainment
-    Icons.fitness_center,         // fitness
-    Icons.fastfood,               // food
-    Icons.card_giftcard,          // gifts
-    Icons.local_hospital,         // healthcare
-    Icons.chair_alt,              // home & furniture
-    Icons.pets,                   // pets
-    Icons.shopping_bag,           // shopping
-    Icons.directions_car,         // transportation & fuel
-    Icons.flight,                 // travel
-    Icons.more_horiz,             // other
+    Icons.receipt_long, Icons.checkroom, Icons.school, Icons.movie,
+    Icons.fitness_center, Icons.fastfood, Icons.card_giftcard,
+    Icons.local_hospital, Icons.chair_alt, Icons.pets,
+    Icons.shopping_bag, Icons.directions_car, Icons.flight, Icons.more_horiz,
   ];
 
   @override
@@ -107,14 +87,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
-        imageQuality: 75, // compress image slightly
+        imageQuality: 75,
       );
       if (image != null) {
         setState(() {
           _selectedImage = image;
           _responseText = '';
+          _hasProcessedReceipt = false;
         });
-        // Call receipt extraction after picking image
         await _uploadImage(File(image.path));
       }
     } catch (e) {
@@ -140,11 +120,9 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         _isUploading = false;
         if (response.statusCode == 200) {
           _responseText = _prettyJson(response.body);
-          // Parse and populate form fields
-          _parseReceiptData(response.body);
+          _parseReceiptDataAndAddTransactions(response.body);
         } else {
-          _responseText =
-          'Upload failed (status ${response.statusCode}): ${response.body}';
+          _responseText = 'Upload failed (status ${response.statusCode}): ${response.body}';
         }
       });
     } catch (e) {
@@ -165,60 +143,166 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     }
   }
 
-  void _parseReceiptData(String responseBody) {
+  // New method to parse receipt data and automatically add transactions
+  Future<void> _parseReceiptDataAndAddTransactions(String responseBody) async {
     try {
       final jsonData = json.decode(responseBody);
 
-      // Extract data and populate form fields
-      if (jsonData['amount'] != null) {
-        _amountController.text = jsonData['amount'].toString();
+      if (jsonData == null || jsonData is! Map) {
+        Get.snackbar('Error', 'Invalid receipt data format');
+        return;
       }
 
-      if (jsonData['description'] != null) {
-        _descriptionController.text = jsonData['description'];
+      // Check if categorizedItems exists and is not empty
+      if (jsonData['categorizedItems'] != null &&
+          jsonData['categorizedItems'] is List &&
+          jsonData['categorizedItems'].isNotEmpty) {
+
+        final String date = jsonData['date'] ?? DateTime.now().toIso8601String().substring(0, 10);
+        final String merchantName = jsonData['merchantName'] ?? 'Receipt Purchase';
+
+        List<TransactionModel> transactionsToAdd = [];
+
+        // Process each category
+        for (var categoryGroup in jsonData['categorizedItems']) {
+          if (categoryGroup is Map) {
+            String category = _mapCategoryToAppCategory(categoryGroup['category'] ?? 'other');
+            double subtotal = (categoryGroup['subtotal'] ?? 0.0).toDouble();
+
+            // Build description from items
+            String itemsDescription = '';
+            if (categoryGroup['items'] != null && categoryGroup['items'] is List) {
+              List<String> itemNames = [];
+              for (var item in categoryGroup['items']) {
+                if (item is Map && item['name'] != null) {
+                  itemNames.add("${item['name']} (₹${item['price']})");
+                }
+              }
+              itemsDescription = itemNames.join(', ');
+            }
+
+            if (itemsDescription.isEmpty) {
+              itemsDescription = '$merchantName - ${category.toLowerCase()} items';
+            }
+
+            // Create transaction model
+            final transaction = TransactionModel(
+              userId: widget.currentUserId,
+              amount: subtotal,
+              description: itemsDescription,
+              category: category,
+              isExpense: true, // Receipts are always expenses
+              transactionDate: DateTime.tryParse(date) ?? DateTime.now(),
+            );
+
+            transactionsToAdd.add(transaction);
+          }
+        }
+
+        // Add all transactions to database
+        if (transactionsToAdd.isNotEmpty) {
+          await _addMultipleTransactions(transactionsToAdd);
+          setState(() {
+            _hasProcessedReceipt = true;
+          });
+
+          Get.snackbar(
+            'Success',
+            'Receipt processed! ${transactionsToAdd.length} transactions added automatically.',
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 3),
+          );
+
+          // Navigate back to home page after 2 seconds
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.pop(context);
+          });
+        }
+      } else {
+        // Handle old format or single transaction
+        _handleSingleTransactionFormat(jsonData);
       }
-
-      if (jsonData['category'] != null) {
-        String category = jsonData['category'];
-        // Try to match with existing expense categories (since receipts are usually expenses)
-        String matchedCategory = _categoriesExpense.firstWhere(
-              (cat) =>
-          cat.toLowerCase().contains(category.toLowerCase()) ||
-              category.toLowerCase().contains(cat.toLowerCase()),
-          orElse: () => 'other',
-        );
-        _categoryController.text = matchedCategory;
-      }
-
-      // Auto-set as expense (since it's from a receipt)
-      _isExpense.value = true;
-
-      Get.snackbar(
-        'Success',
-        'Receipt processed successfully!',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
     } catch (e) {
       print('Error parsing receipt data: $e');
+      Get.snackbar('Error', 'Failed to process receipt data: $e');
     }
   }
 
+  // Method to add multiple transactions
+  Future<void> _addMultipleTransactions(List<TransactionModel> transactions) async {
+    try {
+      for (var transaction in transactions) {
+        await widget.controller.addTransaction(transaction);
+        // Small delay between transactions to avoid overwhelming the server
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add some transactions: $e');
+    }
+  }
+
+  // Handle old single transaction format for backward compatibility
+  void _handleSingleTransactionFormat(Map<dynamic, dynamic> jsonData) {
+    if (jsonData['amount'] != null) {
+      _amountController.text = jsonData['amount'].toString();
+    }
+    if (jsonData['description'] != null) {
+      _descriptionController.text = jsonData['description'];
+    }
+    if (jsonData['category'] != null) {
+      String category = jsonData['category'];
+      String matchedCategory = _mapCategoryToAppCategory(category);
+      _categoryController.text = matchedCategory;
+    }
+    _isExpense.value = true;
+
+    Get.snackbar(
+      'Info',
+      'Receipt data loaded. Please review and save manually.',
+      backgroundColor: Colors.orange,
+      colorText: Colors.white,
+    );
+  }
+
+  // Map server categories to app categories
+  String _mapCategoryToAppCategory(String serverCategory) {
+    final Map<String, String> categoryMapping = {
+      'food': 'food',
+      'grocery': 'food',
+      'groceries': 'food',
+      'household': 'shopping',
+      'personal care': 'shopping',
+      'health': 'healthcare',
+      'medical': 'healthcare',
+      'transport': 'transportation & fuel',
+      'transportation': 'transportation & fuel',
+      'entertainment': 'entertainment',
+      'clothing': 'clothing',
+      'education': 'education',
+      'fitness': 'fitness',
+      'utilities': 'bills',
+      'bills': 'bills',
+      'home': 'home & furniture',
+      'furniture': 'home & furniture',
+      'pets': 'pets',
+      'gifts': 'gifts',
+      'travel': 'travel',
+    };
+
+    String lowerCategory = serverCategory.toLowerCase();
+    return categoryMapping[lowerCategory] ?? 'other';
+  }
+
+  // Rest of your existing methods (onTransactionTypeChanged, showImageSourceOptions, etc.)
   void _onTransactionTypeChanged(bool isExpense) {
-    // Store current category if it exists in the new list
     String currentCategory = _categoryController.text;
-
     _isExpense.value = isExpense;
-
-    // Check if current category exists in the new category list
     List<String> newCategories = isExpense ? _categoriesExpense : _categoriesIncome;
-
     if (!newCategories.contains(currentCategory)) {
-      // Clear category if it doesn't exist in the new list
       _categoryController.text = '';
     }
   }
-
 
   void _showImageSourceOptions() {
     showModalBottomSheet(
@@ -267,8 +351,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     );
   }
 
-  Widget _buildImageSourceOption(
-      String label, IconData icon, VoidCallback onTap) {
+  Widget _buildImageSourceOption(String label, IconData icon, VoidCallback onTap) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -331,8 +414,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-      isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -380,16 +462,17 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _submitTransaction,
-          child: Text(
-            'Save',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
+        if (!_hasProcessedReceipt) // Only show save button if receipt wasn't auto-processed
+          TextButton(
+            onPressed: _submitTransaction,
+            child: Text(
+              'Save',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -809,151 +892,128 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [
-            const Color(0xFF1A1A1A),
-            const Color(0xFF2A2A2A),
-            const Color(0xFF1A1A1A),
-          ]
-              : [
-            const Color(0xFFF8FAFC),
-            const Color(0xFFE2E8F0),
-            const Color(0xFFF8FAFC),
-          ],
+    return SingleChildScrollView(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+              const Color(0xFF1A1A1A),
+              const Color(0xFF2A2A2A),
+              const Color(0xFF1A1A1A),
+            ]
+                : [
+              const Color(0xFFF8FAFC),
+              const Color(0xFFE2E8F0),
+              const Color(0xFFF8FAFC),
+            ],
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Receipt Scanner',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : Colors.black87,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Receipt Scanner',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Take a photo or upload an image of your receipt to automatically extract transaction details',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.white70 : Colors.black54,
+              const SizedBox(height: 8),
+              Text(
+                'Take a photo or upload an image of your receipt to automatically extract transaction details',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Image Preview or Placeholder
-            Container(
-              width: double.infinity,
-              height: 250,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+              // Image Preview or Placeholder
+              Container(
+                width: double.infinity,
+                height: 250,
+                decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.3),
-                  style: BorderStyle.solid,
-                  width: 1,
+                      ? Colors.white.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.3),
+                    style: BorderStyle.solid,
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: _selectedImage != null
-                  ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(_selectedImage!.path),
-                  fit: BoxFit.cover,
-                ),
-              )
-                  : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 60,
-                    color: isDark ? Colors.white54 : Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No receipt image selected',
-                    style: TextStyle(
-                      color: isDark ? Colors.white54 : Colors.grey,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Upload a receipt to auto-fill transaction details',
-                    style: TextStyle(
-                      color:
-                      isDark ? Colors.white38 : Colors.grey.shade400,
-                      fontSize: 12,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Add Image Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isUploading ? null : _showImageSourceOptions,
-                icon: _isUploading
-                    ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(Colors.white),
+                child: _selectedImage != null
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(_selectedImage!.path),
+                    fit: BoxFit.cover,
                   ),
                 )
-                    : const Icon(Icons.add_a_photo),
-                label: Text(_isUploading
-                    ? 'Processing...'
-                    : (_selectedImage != null
-                    ? 'Change Receipt'
-                    : 'Scan Receipt')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                    : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      size: 60,
+                      color: isDark ? Colors.white54 : Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No receipt image selected',
+                      style: TextStyle(
+                        color: isDark ? Colors.white54 : Colors.grey,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Upload a receipt to auto-fill transaction details',
+                      style: TextStyle(
+                        color:
+                        isDark ? Colors.white38 : Colors.grey.shade400,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
 
-            if (_selectedImage != null) ...[
-              const SizedBox(height: 12),
+              // Add Image Button
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _selectedImage = null;
-                      _responseText = '';
-                    });
-                  },
-                  icon: const Icon(Icons.delete),
-                  label: const Text('Remove Image'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
+                child: ElevatedButton.icon(
+                  onPressed: _isUploading ? null : _showImageSourceOptions,
+                  icon: _isUploading
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                      : const Icon(Icons.add_a_photo),
+                  label: Text(_isUploading
+                      ? 'Processing...'
+                      : (_selectedImage != null
+                      ? 'Change Receipt'
+                      : 'Scan Receipt')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -961,47 +1021,72 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   ),
                 ),
               ),
-            ],
 
-            // Response Display
-            if (_responseText.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Text(
-                'Extraction Result:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.grey.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.2),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    _responseText,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      color: isDark ? Colors.white70 : Colors.black87,
+              if (_selectedImage != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _selectedImage = null;
+                        _responseText = '';
+                      });
+                    },
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Remove Image'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
+
+              // Response Display
+              if (_responseText.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Text(
+                  'Extraction Result:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.2),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _responseText,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

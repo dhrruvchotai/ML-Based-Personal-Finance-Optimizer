@@ -568,7 +568,7 @@ Widget _buildModernBottomNav(BuildContext context) {
                   isActive: false,
                   theme: theme,
                   onTap: () {
-                    Get.toNamed('/homePage');
+                    Get.offNamed('/homePage');
                   },
                 ),
                 _ModernBottomNavItem(
@@ -578,7 +578,7 @@ Widget _buildModernBottomNav(BuildContext context) {
                   isActive: false,
                   theme: theme,
                   onTap: () {
-                    Get.toNamed('/analysis');
+                    Get.offNamed('/analysis');
                   },
                 ), //
                 const SizedBox(width: 48),// Space for FAB
@@ -589,7 +589,7 @@ Widget _buildModernBottomNav(BuildContext context) {
                   isActive: true,
                   theme: theme,
                   onTap: () {
-                    Get.toNamed('/goals');
+                    Get.offNamed('/goals');
                   },
                 ),
                 _ModernBottomNavItem(
@@ -599,7 +599,7 @@ Widget _buildModernBottomNav(BuildContext context) {
                   isActive: false,
                   theme: theme,
                   onTap: () {
-                    Get.toNamed('/user-profile');
+                    Get.offNamed('/user-profile');
                   },
                 ),
               ],

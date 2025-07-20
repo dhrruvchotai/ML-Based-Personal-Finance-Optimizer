@@ -27,13 +27,6 @@ class AnalysisPage extends StatelessWidget {
             fontSize: 24,
           ),
         ),
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: Theme.of(context).colorScheme.onBackground,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         elevation: 0,
         centerTitle: true,
         backgroundColor: theme.colorScheme.surface,
@@ -202,7 +195,7 @@ class AnalysisPage extends StatelessWidget {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/homePage');
+                      Get.offNamed('/homePage');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -212,7 +205,7 @@ class AnalysisPage extends StatelessWidget {
                     isActive: true,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/analysis');
+                      Get.offNamed('/analysis');
                     },
                   ), // Space for FAB
                   _ModernBottomNavItem(
@@ -222,7 +215,7 @@ class AnalysisPage extends StatelessWidget {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/goals');
+                      Get.offNamed('/goals');
                     },
                   ),
                   _ModernBottomNavItem(
@@ -232,7 +225,7 @@ class AnalysisPage extends StatelessWidget {
                     isActive: false,
                     theme: theme,
                     onTap: () {
-                      Get.toNamed('/user-profile');
+                      Get.offNamed('/user-profile');
                     },
                   ),
                 ],
@@ -327,7 +320,7 @@ class AnalysisPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '\$${amount.toStringAsFixed(2)}',
+                    '\₹${amount.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -419,10 +412,10 @@ class AnalysisPage extends StatelessWidget {
     }).toList();
 
     return Card(
-      elevation: 2,
+      elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: theme.colorScheme.surface,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -431,14 +424,10 @@ class AnalysisPage extends StatelessWidget {
               title,
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 25),
             SizedBox(
-              height: 300,
+              height: 340,
               child: SfCircularChart(
-                title: ChartTitle(
-                  text: title,
-                  textStyle: theme.textTheme.titleSmall,
-                ),
                 legend: Legend(
                   isVisible: true,
                   overflowMode: LegendItemOverflowMode.wrap,
@@ -446,7 +435,7 @@ class AnalysisPage extends StatelessWidget {
                 ),
                 tooltipBehavior: TooltipBehavior(
                   enable: true,
-                  format: 'point.x: \$point.y',
+                  format: 'point.x: ₹point.y',
                   duration: 1500,
                 ),
                 series: <CircularSeries>[
@@ -480,7 +469,7 @@ class AnalysisPage extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '\$${total.toStringAsFixed(0)}',
+                          '\₹${total.toStringAsFixed(0)}',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -553,13 +542,9 @@ class AnalysisPage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 300,
+              height: 320,
               child: SfCircularChart(
                 title: ChartTitle(
                   text: title,
@@ -572,7 +557,7 @@ class AnalysisPage extends StatelessWidget {
                 ),
                 tooltipBehavior: TooltipBehavior(
                   enable: true,
-                  format: 'point.x: \$point.y',
+                  format: 'point.x: ₹point.y',
                   duration: 1500,
                 ),
                 series: <CircularSeries>[
@@ -603,7 +588,7 @@ class AnalysisPage extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '\$${total.toStringAsFixed(0)}',
+                          '\₹${total.toStringAsFixed(0)}',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -664,7 +649,7 @@ class AnalysisPage extends StatelessWidget {
                 ),
               ),
               Text(
-                '\$${amount.toStringAsFixed(2)}  (${percentage.toStringAsFixed(1)}%)',
+                '\₹${amount.toStringAsFixed(2)}  (${percentage.toStringAsFixed(1)}%)',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.hintColor,
                   fontSize: 12,
@@ -714,7 +699,7 @@ class AnalysisPage extends StatelessWidget {
                   labelStyle: theme.textTheme.bodySmall,
                 ),
                 primaryYAxis: NumericAxis(
-                  numberFormat: NumberFormat.currency(symbol: '\$', decimalDigits: 0),
+                  numberFormat: NumberFormat.currency(symbol: '\₹', decimalDigits: 0),
                   majorGridLines: const MajorGridLines(width: 0.5, dashArray: <double>[5, 5]),
                   axisLine: const AxisLine(width: 0),
                   labelStyle: theme.textTheme.bodySmall,
