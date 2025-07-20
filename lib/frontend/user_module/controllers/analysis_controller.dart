@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -245,19 +246,32 @@ class AnalysisController extends GetxController {
           netAmount: netAmount,
         );
         
-        // Extract email and file path from response
+        // Extract email, file path and download URL from response
         final userEmail = result['email'] as String;
         final filePath = result['filePath'] as String;
+        final downloadUrl = result['downloadUrl'] as String;
         
         Get.snackbar(
           'Report Sent',
           'Your financial report has been sent to $userEmail successfully!',
           backgroundColor: Colors.blue,
           colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+          mainButton: TextButton(
+            onPressed: () {
+              // Open download URL in browser
+              launchDownloadUrl(downloadUrl);
+            },
+            child: const Text(
+              'DOWNLOAD',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
         );
         
         print('Report sent to email: $userEmail');
         print('File saved at: $filePath');
+        print('Download URL: $downloadUrl');
       } catch (e) {
         print('Error sending PDF to server: $e');
         Get.snackbar(
@@ -314,5 +328,32 @@ class AnalysisController extends GetxController {
   // Add this method to refresh market data
   void refreshMarketData() {
     fetchMarketData();
+  }
+  
+  // Launch URL to download PDF
+  Future<void> launchDownloadUrl(String url) async {
+    try {
+      final Uri uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        print('Download URL launched: $url');
+      } else {
+        print('Could not launch URL: $url');
+        Get.snackbar(
+          'Error',
+          'Could not open download link',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to open download link: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 } 
