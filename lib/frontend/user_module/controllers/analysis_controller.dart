@@ -10,9 +10,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction_model.dart';
 import '../services/transaction_service.dart';
 import '../services/pdf_service.dart';
+import '../services/stock_market_service.dart';
 
 class AnalysisController extends GetxController {
   final TransactionService _service = TransactionService();
+  final StockMarketService _stockMarketService = StockMarketService(); // Add stock market service
   
   var transactions = <TransactionModel>[].obs;
   var filteredTransactions = <TransactionModel>[].obs;
@@ -20,6 +22,12 @@ class AnalysisController extends GetxController {
   var errorMessage = ''.obs;
   var isGeneratingPdf = false.obs;
   
+  // New properties for stock market data
+  final isLoadingMarketData = true.obs;
+  final marketDataError = ''.obs;
+  final marketIndices = <String, dynamic>{}.obs;
+  final topGainers = <Map<String, dynamic>>[].obs;
+
   // Chart screenshot keys
   final GlobalKey expenseChartKey = GlobalKey();
   final GlobalKey incomeChartKey = GlobalKey();
@@ -28,6 +36,7 @@ class AnalysisController extends GetxController {
   void onInit() {
     super.onInit();
     loadUserIdAndFetchTransactions();
+    fetchMarketData(); // Add this to fetch market data on init
   }
   
   Future<void> loadUserIdAndFetchTransactions() async {
@@ -241,5 +250,31 @@ class AnalysisController extends GetxController {
     } finally {
       isGeneratingPdf.value = false;
     }
+  }
+
+  // New method to fetch market data
+  Future<void> fetchMarketData() async {
+    isLoadingMarketData.value = true;
+    marketDataError.value = '';
+    
+    try {
+      // Fetch market indices
+      final indicesData = await _stockMarketService.getMarketIndices();
+      marketIndices.value = indicesData['indices'] ?? {};
+      
+      // Fetch top gainers
+      final gainersData = await _stockMarketService.getTopGainers();
+      topGainers.value = (gainersData['gainers'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+      
+    } catch (e) {
+      marketDataError.value = 'Failed to load market data: ${e.toString()}';
+    } finally {
+      isLoadingMarketData.value = false;
+    }
+  }
+
+  // Add this method to refresh market data
+  void refreshMarketData() {
+    fetchMarketData();
   }
 } 

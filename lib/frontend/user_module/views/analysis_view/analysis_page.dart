@@ -108,14 +108,15 @@ class AnalysisPage extends StatelessWidget {
 
               _buildSummaryCards(context),
               const SizedBox(height: 32),
+              
               // Download Report Button
               const SizedBox(height: 12),
               Container(
                 margin: const EdgeInsets.only(bottom: 24),
                 child: ElevatedButton.icon(
-                  onPressed: controller.isGeneratingPdf.value
-                      ? null
-                      : controller.generatePdfReport,
+                  onPressed: controller.isGeneratingPdf.value 
+                    ? null 
+                    : controller.generatePdfReport,
                   icon: controller.isGeneratingPdf.value
                     ? Container(
                         width: 20,
@@ -129,8 +130,8 @@ class AnalysisPage extends StatelessWidget {
                     : const Icon(Icons.download_rounded),
                   label: Text(
                     controller.isGeneratingPdf.value
-                        ? 'Generating PDF...'
-                        : 'Download Financial Report',
+                      ? 'Generating PDF...'
+                      : 'Download Financial Report',
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
@@ -143,9 +144,15 @@ class AnalysisPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
+              
+              // Charts Sections (moved before market data)
               _buildChartsSection(context),
               const SizedBox(height: 32),
               _buildMonthlyTrendsChart(context),
+              const SizedBox(height: 32),
+              
+              // Market Data Section (moved after charts)
+              _buildMarketDataSection(context),
             ],
           ),
         );
@@ -793,6 +800,334 @@ class AnalysisPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Updated method for market data section
+  Widget _buildMarketDataSection(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Indian Market Overview',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            // Refresh button for market data
+            Obx(() => controller.isLoadingMarketData.value
+              ? Container(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                  ),
+                )
+              : IconButton(
+                  icon: Icon(Icons.refresh, color: theme.colorScheme.primary),
+                  onPressed: controller.refreshMarketData,
+                  tooltip: 'Refresh market data',
+                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Market indices section
+        _buildMarketIndicesCards(context),
+        const SizedBox(height: 24),
+        
+        // Top gainers section
+        Text(
+          'Top Indian Stocks',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildTopGainersCard(context),
+      ],
+    );
+  }
+
+  // Widget to show market indices
+  Widget _buildMarketIndicesCards(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Obx(() {
+      if (controller.marketDataError.value.isNotEmpty) {
+        return _buildErrorCard(controller.marketDataError.value, context);
+      }
+      
+      if (controller.marketIndices.isEmpty && !controller.isLoadingMarketData.value) {
+        return _buildErrorCard("No market data available", context);
+      }
+      
+      return Container(
+        height: 160, // Increased height for better display
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: controller.marketIndices.entries.map((entry) {
+            final indexName = entry.key;
+            final indexData = entry.value as Map<String, dynamic>;
+            final isPositive = indexData['is_positive'] as bool? ?? false;
+            
+            // Get appropriate icon based on index name
+            IconData indexIcon = Icons.show_chart;
+            if (indexName.contains('Nifty')) {
+              indexIcon = Icons.trending_up;
+            } else if (indexName.contains('Sensex')) {
+              indexIcon = Icons.bar_chart;
+            } else if (indexName.contains('VIX')) {
+              indexIcon = Icons.timeline;
+            }
+            
+            return Container(
+              width: 170,
+              margin: const EdgeInsets.only(right: 12),
+              child: Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: theme.colorScheme.outline.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              indexIcon,
+                              color: theme.colorScheme.primary,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Small Indian flag indicator
+                          Container(
+                            width: 20,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFF9933), Colors.white, Color(0xFF138808)],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        indexName,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        // Format based on the index value's magnitude
+                        indexName.contains('VIX')
+                            ? '₹${(indexData['price'] as num?)?.toStringAsFixed(2) ?? '0.00'}'
+                            : '₹${_formatLargeNumber((indexData['price'] as num?) ?? 0)}',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                            color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${isPositive ? '+' : ''}${(indexData['change'] as num?)?.toStringAsFixed(2) ?? '0.00'} (${(indexData['percent_change'] as num?)?.toStringAsFixed(2) ?? '0.00'}%)',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    });
+  }
+  
+  // Helper method to format large numbers for better readability
+  String _formatLargeNumber(num value) {
+    if (value >= 100000) {
+      return '${(value / 1000).toStringAsFixed(2)}K';
+    } else if (value >= 10000) {
+      return value.toStringAsFixed(1);
+    } else {
+      return value.toStringAsFixed(2);
+    }
+  }
+  
+  // Widget to show top gainers
+  Widget _buildTopGainersCard(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Obx(() {
+      if (controller.marketDataError.value.isNotEmpty) {
+        return _buildErrorCard(controller.marketDataError.value, context);
+      }
+      
+      if (controller.topGainers.isEmpty && !controller.isLoadingMarketData.value) {
+        return _buildErrorCard("No top gainers data available", context);
+      }
+      
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: theme.colorScheme.outline.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: controller.topGainers.map((stock) {
+              final isPositive = stock['is_positive'] as bool? ?? true;
+              // Get clean stock name (remove .NS or .BSE suffix)
+              final stockSymbol = (stock['symbol'] as String? ?? '')
+                  .replaceAll('.NS', '')
+                  .replaceAll('.BSE', '');
+              
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            stockSymbol,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '₹${(stock['price'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isPositive 
+                            ? Colors.green.withOpacity(0.1) 
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isPositive ? Icons.trending_up : Icons.trending_down,
+                            color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${isPositive ? '+' : ''}${(stock['percent_change'] as num?)?.toStringAsFixed(2) ?? '0.00'}%',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    });
+  }
+  
+  // Widget to show error messages
+  Widget _buildErrorCard(String message, BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: controller.refreshMarketData,
+              child: const Text('Retry'),
+            )
+          ],
+        ),
       ),
     );
   }
