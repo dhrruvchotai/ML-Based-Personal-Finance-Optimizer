@@ -2,7 +2,10 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ml_based_personal_finance_optimizer/frontend/user_module/controllers/theme_controller/theme_controller.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/services/notification_service.dart';
+import '../../models/transaction_model.dart';
 import '../../controllers/user_profile_controller.dart';
 
 class UserProfileView extends StatelessWidget {
@@ -10,6 +13,7 @@ class UserProfileView extends StatelessWidget {
 
   final UserProfileController controller = Get.put(UserProfileController());
   final ThemeController themeController = Get.find<ThemeController>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -231,6 +235,84 @@ class UserProfileView extends StatelessWidget {
 
                         // Theme Toggle Button
                         _buildThemeButton(context),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Test Notifications Section
+                        Text(
+                          'Notifications',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onBackground,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ElevatedButton.icon(
+                              icon: Icon(Icons.notifications_active, size: 18),
+                              label: Text('Test Immediate'),
+                              onPressed: () async {
+                                bool success = await NotificationService.sendTestNotification();
+                                Get.snackbar(
+                                  success ? 'Success' : 'Failed',
+                                  success 
+                                    ? 'Immediate test notification sent' 
+                                    : 'Failed to send test notification',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: success ? Colors.green : Colors.red,
+                                  colorText: Colors.white,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              icon: Icon(Icons.timer, size: 18),
+                              label: Text('Test 5s Delay'),
+                              onPressed: () async {
+                                // Create a test transaction
+                                final testTransaction = TransactionModel(
+                                  userId: 'test_user',
+                                  amount: 100.0,
+                                  description: 'Test Transaction',
+                                  category: 'food',
+                                  isExpense: true,
+                                  transactionDate: DateTime.now(),
+                                  isRecurring: true,
+                                  recurringDuration: 30,
+                                );
+                                
+                                bool success = await NotificationService.scheduleRecurringTransaction(
+                                  transaction: testTransaction,
+                                  durationInDays: 30,
+                                  isTestMode: true,
+                                );
+                                
+                                Get.snackbar(
+                                  success ? 'Success' : 'Failed',
+                                  success 
+                                    ? 'Test notification scheduled (5 sec)' 
+                                    : 'Failed to schedule test notification',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: success ? Colors.green : Colors.red,
+                                  colorText: Colors.white,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
