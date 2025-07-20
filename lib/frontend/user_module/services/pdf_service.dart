@@ -22,6 +22,7 @@ class PdfService {
     required String userName,
     Uint8List? expenseChartImage,
     Uint8List? incomeChartImage,
+    Uint8List? monthlyTrendsChartImage,
   }) async {
     final pdf = pw.Document();
     
@@ -72,6 +73,9 @@ class PdfService {
           pw.SizedBox(height: 20),
           _buildIncomeSection(incomeData, incomeChartImage),
           pw.SizedBox(height: 20),
+          // Add monthly trends section
+          if (monthlyTrendsChartImage != null)
+            _buildMonthlyTrendsSection(monthlyTrendsChartImage),
         ],
       ),
     );
@@ -373,6 +377,76 @@ class PdfService {
               ];
             }).toList(),
           ],
+        ),
+      ],
+    );
+  }
+  
+  // Build monthly trends section with chart
+  static pw.Widget _buildMonthlyTrendsSection(Uint8List chartImage) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Monthly Trends',
+          style: pw.TextStyle(
+            fontSize: 18,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 15),
+        
+        pw.Center(
+          child: pw.Image(
+            pw.MemoryImage(chartImage),
+            height: 250,
+            fit: pw.BoxFit.contain,
+          ),
+        ),
+        
+        pw.SizedBox(height: 10),
+        
+        pw.Container(
+          padding: pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.blue50,
+            borderRadius: pw.BorderRadius.circular(8),
+            border: pw.Border.all(color: PdfColors.blue200),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              _buildLegendItem(PdfColors.green700, 'Income'),
+              pw.SizedBox(width: 20),
+              _buildLegendItem(PdfColors.red700, 'Expenses'),
+              pw.SizedBox(width: 20),
+              _buildLegendItem(PdfColors.blue700, 'Net'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Helper to build legend items for the monthly trends chart
+  static pw.Widget _buildLegendItem(PdfColor color, String label) {
+    return pw.Row(
+      children: [
+        pw.Container(
+          width: 12,
+          height: 12,
+          decoration: pw.BoxDecoration(
+            color: color,
+            shape: pw.BoxShape.circle,
+          ),
+        ),
+        pw.SizedBox(width: 5),
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 10,
+            color: PdfColors.grey800,
+          ),
         ),
       ],
     );

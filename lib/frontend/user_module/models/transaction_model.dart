@@ -7,6 +7,8 @@ class TransactionModel {
   final DateTime transactionDate;
   final String category;
   final String? merchant;
+  final bool isRecurring;
+  final int? recurringDuration; // In days
 
   TransactionModel({
     this.transactionId,
@@ -17,6 +19,8 @@ class TransactionModel {
     required this.transactionDate,
     required this.category,
     this.merchant,
+    this.isRecurring = false,
+    this.recurringDuration,
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +48,8 @@ class TransactionModel {
         transactionDate: transactionDate,
         category: json['category'],
         merchant: json['merchant'],
+        isRecurring: json['isRecurring'] ?? false,
+        recurringDuration: json['recurringDuration'],
       );
       
       print('TransactionModel: Successfully created model: $model');
@@ -65,6 +71,8 @@ class TransactionModel {
       'description': description,
       'category': category,
       'merchant': merchant,
+      'isRecurring': isRecurring,
+      'recurringDuration': recurringDuration,
     };
   }
 
@@ -77,6 +85,8 @@ class TransactionModel {
     DateTime? transactionDate,
     String? category,
     String? merchant,
+    bool? isRecurring,
+    int? recurringDuration,
   }) {
     return TransactionModel(
       transactionId: transactionId ?? this.transactionId,
@@ -87,11 +97,13 @@ class TransactionModel {
       transactionDate: transactionDate ?? this.transactionDate,
       category: category ?? this.category,
       merchant: merchant ?? this.merchant,
+      isRecurring: isRecurring ?? this.isRecurring,
+      recurringDuration: recurringDuration ?? this.recurringDuration,
     );
   }
 
   @override
   String toString() {
-    return 'TransactionModel(transactionId: $transactionId, userId: $userId, amount: $amount, description: $description, isExpense: $isExpense, transactionDate: $transactionDate, category: $category, merchant: $merchant)';
+    return 'TransactionModel(transactionId: $transactionId, userId: $userId, amount: $amount, description: $description, isExpense: $isExpense, transactionDate: $transactionDate, category: $category, merchant: $merchant, isRecurring: $isRecurring, recurringDuration: $recurringDuration)';
   }
 }
