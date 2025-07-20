@@ -676,14 +676,12 @@ class AnalysisPage extends StatelessWidget {
   Widget _buildMonthlyTrendsChart(BuildContext context) {
     final theme = Theme.of(context);
 
-    final List<MonthlyData> monthlyData = [
-      MonthlyData('Jan', 1200, 900),
-      MonthlyData('Feb', 1300, 1000),
-      MonthlyData('Mar', 1100, 1200),
-      MonthlyData('Apr', 1400, 1100),
-      MonthlyData('May', 1500, 1300),
-      MonthlyData('Jun', 1350, 1250),
-    ];
+    // Get real data from controller
+    final List<MonthlyTrendsData> monthlyData = controller.getMonthlyTrendsData();
+
+    if (monthlyData.isEmpty) {
+      return _buildEmptyChart(context, 'Monthly Trends');
+    }
 
     return Card(
       elevation: 2,
@@ -701,61 +699,208 @@ class AnalysisPage extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              child: SfCartesianChart(
-                plotAreaBorderWidth: 0,
-                primaryXAxis: CategoryAxis(
-                  majorGridLines: const MajorGridLines(width: 0),
-                  labelStyle: theme.textTheme.bodySmall,
-                ),
-                primaryYAxis: NumericAxis(
-                  numberFormat:
-                      NumberFormat.currency(symbol: '\₹', decimalDigits: 0),
-                  majorGridLines: const MajorGridLines(
-                      width: 0.5, dashArray: <double>[5, 5]),
-                  axisLine: const AxisLine(width: 0),
-                  labelStyle: theme.textTheme.bodySmall,
-                ),
-                legend: Legend(
-                  isVisible: true,
-                  position: LegendPosition.top,
-                  overflowMode: LegendItemOverflowMode.wrap,
-                ),
-                tooltipBehavior: TooltipBehavior(
-                  enable: true,
-                  animationDuration: 1000,
-                ),
-                series: <CartesianSeries<MonthlyData, String>>[
-                  ColumnSeries<MonthlyData, String>(
-                    name: 'Income',
-                    dataSource: monthlyData,
-                    xValueMapper: (MonthlyData data, _) => data.month,
-                    yValueMapper: (MonthlyData data, _) => data.income,
-                    color: theme.colorScheme.primary.withOpacity(0.7),
-                    borderRadius: const BorderRadius.all(Radius.circular(8)),
-                    width: 0.4,
-                    spacing: 0.2,
-                    animationDuration: 1500,
-                    enableTooltip: true,
+            RepaintBoundary(
+              key: controller.monthlyTrendsChartKey,
+              child: SizedBox(
+                height: 300,
+                child: SfCartesianChart(
+                  plotAreaBorderWidth: 0,
+                  primaryXAxis: CategoryAxis(
+                    majorGridLines: const MajorGridLines(width: 0),
+                    labelStyle: theme.textTheme.bodySmall,
                   ),
-                  ColumnSeries<MonthlyData, String>(
-                    name: 'Expenses',
-                    dataSource: monthlyData,
-                    xValueMapper: (MonthlyData data, _) => data.month,
-                    yValueMapper: (MonthlyData data, _) => data.expense,
-                    color: theme.colorScheme.error.withOpacity(0.7),
-                    borderRadius: const BorderRadius.all(Radius.circular(8)),
-                    width: 0.4,
-                    spacing: 0.2,
-                    animationDuration: 1500,
-                    enableTooltip: true,
+                  primaryYAxis: NumericAxis(
+                    numberFormat:
+                        NumberFormat.currency(symbol: '\₹', decimalDigits: 0),
+                    majorGridLines: const MajorGridLines(
+                        width: 0.5, dashArray: <double>[5, 5]),
+                    axisLine: const AxisLine(width: 0),
+                    labelStyle: theme.textTheme.bodySmall,
                   ),
-                ],
+                  legend: Legend(
+                    isVisible: true,
+                    position: LegendPosition.top,
+                    overflowMode: LegendItemOverflowMode.wrap,
+                  ),
+                  tooltipBehavior: TooltipBehavior(
+                    enable: true,
+                    animationDuration: 1000,
+                    format: 'point.x: ₹point.y',
+                  ),
+                  crosshairBehavior: CrosshairBehavior(
+                    enable: true,
+                    lineType: CrosshairLineType.both,
+                    activationMode: ActivationMode.singleTap,
+                    lineColor: theme.colorScheme.primary.withOpacity(0.5),
+                  ),
+                  zoomPanBehavior: ZoomPanBehavior(
+                    enablePinching: true,
+                    enableDoubleTapZooming: true,
+                    enablePanning: true,
+                    zoomMode: ZoomMode.x,
+                  ),
+                  trackballBehavior: TrackballBehavior(
+                    enable: true,
+                    activationMode: ActivationMode.singleTap,
+                    tooltipSettings: const InteractiveTooltip(
+                      format: 'point.x: ₹point.y',
+                      enable: true,
+                    ),
+                  ),
+                  series: <CartesianSeries<MonthlyTrendsData, String>>[
+                    ColumnSeries<MonthlyTrendsData, String>(
+                      name: 'Income',
+                      dataSource: monthlyData,
+                      xValueMapper: (MonthlyTrendsData data, _) => data.month,
+                      yValueMapper: (MonthlyTrendsData data, _) => data.income,
+                      color: const Color(0xFF81C784), // Green for income
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
+                      width: 0.4,
+                      spacing: 0.2,
+                      animationDuration: 1500,
+                      enableTooltip: true,
+                      dataLabelSettings: DataLabelSettings(
+                        isVisible: monthlyData.length <= 4, // Only show labels if there are few data points
+                        labelAlignment: ChartDataLabelAlignment.outer,
+                        textStyle: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                    ColumnSeries<MonthlyTrendsData, String>(
+                      name: 'Expenses',
+                      dataSource: monthlyData,
+                      xValueMapper: (MonthlyTrendsData data, _) => data.month,
+                      yValueMapper: (MonthlyTrendsData data, _) => data.expense,
+                      color: const Color(0xFFE57373), // Red for expenses
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
+                      width: 0.4,
+                      spacing: 0.2,
+                      animationDuration: 1500,
+                      enableTooltip: true,
+                      dataLabelSettings: DataLabelSettings(
+                        isVisible: monthlyData.length <= 4, // Only show labels if there are few data points
+                        labelAlignment: ChartDataLabelAlignment.outer,
+                        textStyle: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                    // Add a line series to show the net trend
+                    LineSeries<MonthlyTrendsData, String>(
+                      name: 'Net',
+                      dataSource: monthlyData,
+                      xValueMapper: (MonthlyTrendsData data, _) => data.month,
+                      yValueMapper: (MonthlyTrendsData data, _) => data.income - data.expense,
+                      color: theme.colorScheme.primary,
+                      width: 2,
+                      markerSettings: const MarkerSettings(
+                        isVisible: true,
+                        height: 8,
+                        width: 8,
+                        shape: DataMarkerType.circle,
+                      ),
+                      animationDuration: 2000,
+                      enableTooltip: true,
+                    ),
+                  ],
+                ),
               ),
             ),
+
+            // Add summary stats
+            if (monthlyData.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _buildMonthlySummary(context, monthlyData),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Helper widget to show summary of monthly trends
+  Widget _buildMonthlySummary(BuildContext context, List<MonthlyTrendsData> data) {
+    final theme = Theme.of(context);
+
+    // Calculate average income and expense
+    final avgIncome = data.fold(0.0, (sum, item) => sum + item.income) / data.length;
+    final avgExpense = data.fold(0.0, (sum, item) => sum + item.expense) / data.length;
+
+    // Find highest income and expense month
+    final highestIncome = data.reduce((curr, next) =>
+        curr.income > next.income ? curr : next);
+    final highestExpense = data.reduce((curr, next) =>
+        curr.expense > next.expense ? curr : next);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Monthly Summary',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildSummaryRow(
+          context,
+          'Average Monthly Income:',
+          '₹${avgIncome.toStringAsFixed(0)}',
+          icon: Icons.arrow_upward,
+          color: Colors.green,
+        ),
+        _buildSummaryRow(
+          context,
+          'Average Monthly Expense:',
+          '₹${avgExpense.toStringAsFixed(0)}',
+          icon: Icons.arrow_downward,
+          color: Colors.red,
+        ),
+        _buildSummaryRow(
+          context,
+          'Highest Income Month:',
+          '${highestIncome.month} (₹${highestIncome.income.toStringAsFixed(0)})',
+          icon: Icons.trending_up,
+          color: Colors.blue,
+        ),
+        _buildSummaryRow(
+          context,
+          'Highest Expense Month:',
+          '${highestExpense.month} (₹${highestExpense.expense.toStringAsFixed(0)})',
+          icon: Icons.trending_down,
+          color: Colors.orange,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryRow(
+    BuildContext context,
+    String label,
+    String value,
+    {required IconData icon, required Color color}
+  ) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.8),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1207,12 +1352,4 @@ class ChartData {
   final Color color;
 
   ChartData(this.category, this.amount, this.color);
-}
-
-class MonthlyData {
-  final String month;
-  final double income;
-  final double expense;
-
-  MonthlyData(this.month, this.income, this.expense);
 }

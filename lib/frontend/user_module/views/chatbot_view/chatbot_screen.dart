@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ml_based_personal_finance_optimizer/frontend/user_module/views/home_page.dart';
 import '../../controllers/chatbot_controller/chatbot_controller.dart';
 
 class ChatBotScreen extends StatefulWidget {
@@ -174,6 +175,20 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 padding: EdgeInsets.zero,
               ),
             ),
+            actions: [
+              Container(
+                margin: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.more_vert, color: Color(0xFF6B7280), size: 18),
+                  onPressed: () {},
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ),
       ),

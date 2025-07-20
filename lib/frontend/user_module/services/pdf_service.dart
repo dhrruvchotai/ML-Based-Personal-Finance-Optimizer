@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +11,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class PdfService {
+   final String? baseUrl = dotenv.env['BASE_URL'];
   // Generate and save a PDF report
   static Future<File> generateFinancialReport({
     required double totalIncome,
@@ -22,6 +25,7 @@ class PdfService {
     required String userName,
     Uint8List? expenseChartImage,
     Uint8List? incomeChartImage,
+    Uint8List? monthlyTrendsChartImage,
   }) async {
     final pdf = pw.Document();
     
@@ -72,6 +76,9 @@ class PdfService {
           pw.SizedBox(height: 20),
           _buildIncomeSection(incomeData, incomeChartImage),
           pw.SizedBox(height: 20),
+          // Add monthly trends section
+          if (monthlyTrendsChartImage != null)
+            _buildMonthlyTrendsSection(monthlyTrendsChartImage),
         ],
       ),
     );
@@ -84,7 +91,7 @@ class PdfService {
   }
 
 
-  static Future<void> sendPdfToServer(
+  static Future<Map<String, dynamic>> sendPdfToServer(
     File pdfFile, {
     String? userId,
     double? totalIncome,
@@ -92,8 +99,9 @@ class PdfService {
     double? netAmount,
   }) async {
     try {
-      // You can replace this URL with your actual server endpoint
-      final uri = Uri.parse('localhost:5000/api/pdf/upload/');
+      // Get base URL from environment variable
+      final baseUrl = dotenv.env['BASE_URL'] ?? 'https://ml-based-personal-finance-optimizer.onrender.com';
+      final uri = Uri.parse('$baseUrl/api/pdf/upload');
       
       // Create multipart request
       final request = http.MultipartRequest('POST', uri);
@@ -103,24 +111,39 @@ class PdfService {
         'file', 
         pdfFile.path,
         filename: pdfFile.path.split('/').last,
+        contentType: MediaType('application', 'pdf'),
       ));
       
       // Add additional form data if provided
       if (userId != null) {
         request.fields['userId'] = userId;
+        print("Adding userId: $userId");
       }
       if (totalIncome != null) {
         request.fields['totalIncome'] = totalIncome.toString();
+        print("Adding totalIncome: $totalIncome");
       }
       if (totalExpenses != null) {
         request.fields['totalExpenses'] = totalExpenses.toString();
+        print("Adding totalExpenses: $totalExpenses");
       }
       if (netAmount != null) {
         request.fields['netAmount'] = netAmount.toString();
+        print("Adding netAmount: $netAmount");
       }
       
-      // Add any additional headers if needed
-      request.headers['Content-Type'] = 'multipart/form-data';
+      // Add dummy field to ensure form data is recognized
+      request.fields['_appData'] = 'true';
+      
+      // Don't set Content-Type header - let the browser set it automatically with boundary
+      
+      // Debug: Print request details
+      print("Sending PDF to server:");
+      print("URL: $uri");
+      print("File path: ${pdfFile.path}");
+      print("File size: ${await pdfFile.length()} bytes");
+      print("Request fields: ${request.fields}");
+      print("Request files: ${request.files.map((f) => '${f.field}: ${f.filename}').toList()}");
       
       // Send the request
       final streamedResponse = await request.send();
@@ -129,6 +152,21 @@ class PdfService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         print("PDF sent to server successfully");
         print("Response: ${response.body}");
+        
+        // Parse response to get email and file info
+        final responseData = json.decode(response.body);
+        final userEmail = responseData['user']['email'];
+        final filePath = responseData['file']['filePath'];
+        
+        print("User email from response: $userEmail");
+        print("File path from response: $filePath");
+        
+        return {
+          'success': true,
+          'email': userEmail,
+          'filePath': filePath,
+          'response': responseData
+        };
       } else {
         print("Failed to send PDF: ${response.statusCode}");
         print("Response: ${response.body}");
@@ -373,6 +411,76 @@ class PdfService {
               ];
             }).toList(),
           ],
+        ),
+      ],
+    );
+  }
+  
+  // Build monthly trends section with chart
+  static pw.Widget _buildMonthlyTrendsSection(Uint8List chartImage) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Monthly Trends',
+          style: pw.TextStyle(
+            fontSize: 18,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 15),
+        
+        pw.Center(
+          child: pw.Image(
+            pw.MemoryImage(chartImage),
+            height: 250,
+            fit: pw.BoxFit.contain,
+          ),
+        ),
+        
+        pw.SizedBox(height: 10),
+        
+        pw.Container(
+          padding: pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.blue50,
+            borderRadius: pw.BorderRadius.circular(8),
+            border: pw.Border.all(color: PdfColors.blue200),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              _buildLegendItem(PdfColors.green700, 'Income'),
+              pw.SizedBox(width: 20),
+              _buildLegendItem(PdfColors.red700, 'Expenses'),
+              pw.SizedBox(width: 20),
+              _buildLegendItem(PdfColors.blue700, 'Net'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Helper to build legend items for the monthly trends chart
+  static pw.Widget _buildLegendItem(PdfColor color, String label) {
+    return pw.Row(
+      children: [
+        pw.Container(
+          width: 12,
+          height: 12,
+          decoration: pw.BoxDecoration(
+            color: color,
+            shape: pw.BoxShape.circle,
+          ),
+        ),
+        pw.SizedBox(width: 5),
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 10,
+            color: PdfColors.grey800,
+          ),
         ),
       ],
     );

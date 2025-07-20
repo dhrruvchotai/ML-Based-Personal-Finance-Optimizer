@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../controllers/transaction_controllers/transaction_controller.dart';
 import '../models/transaction_model.dart';
+import '../services/notification_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -41,6 +42,14 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   String _responseText = '';
   bool _isUploading = false;
   bool _hasProcessedReceipt = false; // Track if receipt was processed
+  
+  // Recurring transaction fields
+  final RxBool _isRecurring = false.obs;
+  final TextEditingController _recurringDurationController = TextEditingController();
+  
+  // Use doubles for duration and add 1 minute option (as minutes rather than fraction of days)
+  final List<int> _durationOptions = [1, 7, 14, 30, 90, 180, 365]; // Days, with 1 = 1 minute for testing
+  int _selectedDuration = 30; // Default is monthly
 
   // Categories and icons (your existing lists)
   final List<String> _categoriesIncome = [
@@ -80,6 +89,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     _amountController.dispose();
     _descriptionController.dispose();
     _categoryController.dispose();
+    _recurringDurationController.dispose();
     super.dispose();
   }
 
@@ -394,9 +404,17 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         category: _categoryController.text,
         isExpense: _isExpense.value,
         transactionDate: DateTime.now(),
+        isRecurring: _isRecurring.value,
+        recurringDuration: _isRecurring.value ? _selectedDuration : null,
       );
 
       widget.controller.addTransaction(transaction);
+      
+      if (_isRecurring.value) {
+        // Schedule notification for recurring transaction
+        _scheduleRecurringTransactionNotification(transaction);
+      }
+      
       Navigator.pop(context);
 
       Get.snackbar(
@@ -405,6 +423,53 @@ class _AddTransactionPageState extends State<AddTransactionPage>
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
+    }
+  }
+  
+  void _scheduleRecurringTransactionNotification(TransactionModel transaction) async {
+    if (transaction.isRecurring && transaction.recurringDuration != null) {
+      try {
+        // Handle special case for 1-minute test duration
+        int durationInDays = transaction.recurringDuration!;
+        
+        // If duration is 1, it's our 1-minute test option
+        if (durationInDays == 1) {
+          // Schedule notification for 1 minute from now
+          bool success = await NotificationService.scheduleRecurringTransaction(
+            transaction: transaction,
+            durationInDays: durationInDays,
+            isTestMode: true, // Pass flag to indicate test mode (1 minute)
+          );
+          
+          if (success) {
+            print('Test notification scheduled for 1 minute');
+            Get.snackbar(
+              'Test Notification',
+              'A test notification has been scheduled for 1 minute from now.',
+              backgroundColor: Colors.blue,
+              colorText: Colors.white,
+              duration: const Duration(seconds: 3),
+            );
+          } else {
+            print('Failed to schedule test notification');
+          }
+        } else {
+          // Normal duration in days
+          bool success = await NotificationService.scheduleRecurringTransaction(
+            transaction: transaction,
+            durationInDays: durationInDays,
+            isTestMode: false,
+          );
+          
+          if (success) {
+            print('Recurring transaction notification scheduled successfully for ${transaction.recurringDuration} days');
+          } else {
+            print('Failed to schedule recurring transaction notification');
+          }
+        }
+      } catch (e) {
+        print('Error scheduling recurring transaction notification: $e');
+      }
     }
   }
 
@@ -685,6 +750,114 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   return null;
                 },
               ),
+              const SizedBox(height: 20),
+              
+              // Recurring Transaction Toggle
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Do you want to repeat this transaction?',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Obx(() => Switch(
+                          value: _isRecurring.value,
+                          onChanged: (value) => _isRecurring.value = value,
+                          activeColor: Theme.of(context).colorScheme.primary,
+                        )),
+                      ],
+                    ),
+                    
+                    Obx(() => _isRecurring.value 
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 16),
+                            Text(
+                              'Repeat every',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.1)
+                                    : Colors.grey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<int>(
+                                  value: _selectedDuration,
+                                  isExpanded: true,
+                                  dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                                  icon: Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : Colors.black87,
+                                    fontSize: 16,
+                                  ),
+                                  items: _durationOptions.map((days) {
+                                    String label;
+                                    if (days == 1) label = '1 minute (testing)';
+                                    else if (days == 7) label = '7 days (1 week)';
+                                    else if (days == 14) label = '14 days (2 weeks)';
+                                    else if (days == 30) label = '30 days (monthly)';
+                                    else if (days == 90) label = '90 days (quarterly)';
+                                    else if (days == 180) label = '180 days (half-yearly)';
+                                    else if (days == 365) label = '365 days (yearly)';
+                                    else label = '$days days';
+                                    
+                                    return DropdownMenuItem<int>(
+                                      value: days,
+                                      child: Text(label),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedDuration = value;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : const SizedBox(),
+                    ),
+                  ],
+                ),
+              ),
+              
               const SizedBox(height: 20),
 
               // Date and Category Container
