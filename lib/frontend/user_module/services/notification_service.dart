@@ -14,35 +14,57 @@ class NotificationService {
   static final Int64List highVibrationPattern = Int64List.fromList([0, 200, 100, 200]);
 
   static Future<void> initializeNotifications() async {
-    await AwesomeNotifications().initialize(
-      'resource://drawable/app_icon', // Use the app icon for notifications
-      [
-        NotificationChannel(
-          channelKey: transactionChannelKey,
-          channelName: transactionChannelName,
-          channelDescription: transactionChannelDescription,
-          defaultColor: Colors.blue,
-          ledColor: Colors.blue,
-          importance: NotificationImportance.High,
-          channelShowBadge: true,
-          vibrationPattern: highVibrationPattern,
-          enableVibration: true,
-          playSound: true,
-          soundSource: 'resource://raw/notification_sound',
-          locked: false,
-        )
-      ],
-      debug: true,
-    );
+    // Check if notifications are already initialized - we'll use a try-catch instead of accessing 'initialized'
+    try {
+      print('Initializing notifications...');
+      
+      // Initialize AwesomeNotifications with a simple default icon
+      final success = await AwesomeNotifications().initialize(
+        null, // Use null instead of resource path that might not exist
+        [
+          NotificationChannel(
+            channelKey: transactionChannelKey,
+            channelName: transactionChannelName,
+            channelDescription: transactionChannelDescription,
+            defaultColor: Colors.blue,
+            ledColor: Colors.blue,
+            importance: NotificationImportance.High,
+            channelShowBadge: true,
+            vibrationPattern: highVibrationPattern,
+            enableVibration: true,
+            playSound: true,
+            // Remove soundSource that might not exist
+            locked: false,
+          )
+        ],
+        debug: true,
+      );
+      
+      print('Notification initialization result: $success');
 
-    // Request notification permissions
-    await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
+      // Request notification permissions immediately
+      await requestNotificationPermissions();
+    } catch (e) {
+      print('Error initializing notifications: $e');
+    }
+  }
+  
+  // Separate method to request permissions
+  static Future<bool> requestNotificationPermissions() async {
+    try {
+      final isAllowed = await AwesomeNotifications().isNotificationAllowed();
+      print('Notifications allowed: $isAllowed');
+      
       if (!isAllowed) {
-        AwesomeNotifications().requestPermissionToSendNotifications();
+        final result = await AwesomeNotifications().requestPermissionToSendNotifications();
+        print('Permission request result: $result');
+        return result;
       }
-    });
-
-    // Remove duplicate action stream listener since it's already in main.dart
+      return isAllowed;
+    } catch (e) {
+      print('Error requesting notification permissions: $e');
+      return false;
+    }
   }
 
   static Future<bool> scheduleRecurringTransaction({
@@ -54,10 +76,13 @@ class NotificationService {
       // Create unique notification ID based on transaction details
       final int notificationId = _generateNotificationId(transaction);
       
-      // Calculate scheduled date based on duration
+      // For test mode, use a very short duration (5 seconds) instead of 1 minute
       final DateTime scheduledDate = isTestMode 
-          ? DateTime.now().add(const Duration(minutes: 1)) // 1 minute for testing
+          ? DateTime.now().add(const Duration(seconds: 5)) 
           : DateTime.now().add(Duration(days: durationInDays));
+      
+      print('Scheduling notification for ${scheduledDate.toString()}');
+      print('Current time: ${DateTime.now().toString()}');
       
       // Format amount with 2 decimal places and add thousand separators
       final String formattedAmount = _formatCurrency(transaction.amount);
@@ -84,10 +109,45 @@ class NotificationService {
       if (transaction.description != null && transaction.description!.isNotEmpty) {
         notificationBody += '\n"${transaction.description}"';
       }
+      
+      // For test mode, add a simpler notification to ensure it works
+      if (isTestMode) {
+        notificationTitle = 'Test Notification';
+        notificationBody = 'This is a test notification for transaction: ${transaction.category}';
+      }
 
+      // First check if we have permission
+      final hasPermission = await AwesomeNotifications().isNotificationAllowed();
+      if (!hasPermission) {
+        print('Notification permission not granted. Requesting...');
+        final permissionGranted = await requestNotificationPermissions();
+        if (!permissionGranted) {
+          print('Failed to get notification permission');
+          return false;
+        }
+      }
+
+      // For immediate test notification
+      if (isTestMode) {
+        print('Creating immediate test notification');
+        bool success = await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: notificationId,
+            channelKey: transactionChannelKey,
+            title: 'Immediate Test Notification',
+            body: 'This should appear right away!',
+            notificationLayout: NotificationLayout.Default,
+            payload: payload,
+          ),
+        );
+        print('Immediate test notification created: $success');
+      }
+
+      // Create the scheduled notification
+      print('Creating scheduled notification with ID: $notificationId');
       bool success = await AwesomeNotifications().createNotification(
         content: NotificationContent(
-          id: notificationId,
+          id: notificationId + 1, // Use different ID for scheduled notification
           channelKey: transactionChannelKey,
           title: notificationTitle,
           body: notificationBody,
@@ -112,12 +172,23 @@ class NotificationService {
             autoDismissible: true,
           ),
         ],
-        schedule: NotificationCalendar.fromDate(date: scheduledDate),
+        schedule: isTestMode 
+            ? NotificationInterval(interval: 5, timeZone: await AwesomeNotifications().getLocalTimeZoneIdentifier())
+            : NotificationCalendar.fromDate(date: scheduledDate),
       );
 
+      print('Scheduled notification created: $success');
+      
       // Schedule the next notification if this one is successful and not a test
       if (success && !isTestMode && transaction.isRecurring && transaction.recurringDuration != null) {
         _scheduleNextOccurrence(transaction, notificationId);
+      }
+      
+      // List pending notifications for debugging
+      final pendingNotifications = await AwesomeNotifications().listScheduledNotifications();
+      print('Pending notifications: ${pendingNotifications.length}');
+      for (var notification in pendingNotifications) {
+        print('Pending notification ID: ${notification.content?.id}, scheduled for: ${notification.schedule?.toMap()}');
       }
       
       return success;
@@ -255,6 +326,9 @@ class NotificationService {
   
   // Process notification actions
   static void processNotificationAction(ReceivedAction receivedAction) async {
+    print('Received notification action: ${receivedAction.buttonKeyPressed}');
+    print('Payload: ${receivedAction.payload}');
+    
     if (receivedAction.buttonKeyPressed == 'ADD') {
       // User wants to add the transaction
       final Map<String, String?>? payload = receivedAction.payload;
@@ -327,6 +401,38 @@ class NotificationService {
         borderRadius: 10,
         icon: const Icon(Icons.skip_next, color: Colors.white),
       );
+    }
+  }
+  
+  // Method to manually trigger a test notification
+  static Future<bool> sendTestNotification() async {
+    try {
+      // First check if we have permission
+      final hasPermission = await AwesomeNotifications().isNotificationAllowed();
+      if (!hasPermission) {
+        final permissionGranted = await requestNotificationPermissions();
+        if (!permissionGranted) {
+          print('Failed to get notification permission for test');
+          return false;
+        }
+      }
+      
+      // Create a simple test notification that appears immediately
+      bool success = await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 9999,
+          channelKey: transactionChannelKey,
+          title: 'Test Notification',
+          body: 'This is a test notification to verify notifications are working',
+          notificationLayout: NotificationLayout.Default,
+        ),
+      );
+      
+      print('Test notification created: $success');
+      return success;
+    } catch (e) {
+      print('Error sending test notification: $e');
+      return false;
     }
   }
 } 
