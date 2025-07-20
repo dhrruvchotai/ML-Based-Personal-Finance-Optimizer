@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +10,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class PdfService {
+   final String? baseUrl = dotenv.env['BASE_URL'];
   // Generate and save a PDF report
   static Future<File> generateFinancialReport({
     required double totalIncome,
@@ -92,8 +94,9 @@ class PdfService {
     double? netAmount,
   }) async {
     try {
-      // You can replace this URL with your actual server endpoint
-      final uri = Uri.parse('localhost:5000/api/pdf/upload/');
+      // Get base URL from environment variable
+      final baseUrl = dotenv.env['BASE_URL'] ?? 'https://ml-based-personal-finance-optimizer.onrender.com';
+      final uri = Uri.parse('$baseUrl/api/pdf/upload');
       
       // Create multipart request
       final request = http.MultipartRequest('POST', uri);
@@ -103,6 +106,7 @@ class PdfService {
         'file', 
         pdfFile.path,
         filename: pdfFile.path.split('/').last,
+        contentType: MediaType('application', 'pdf'),
       ));
       
       // Add additional form data if provided
@@ -119,8 +123,15 @@ class PdfService {
         request.fields['netAmount'] = netAmount.toString();
       }
       
-      // Add any additional headers if needed
-      request.headers['Content-Type'] = 'multipart/form-data';
+      // Don't set Content-Type header - let the browser set it automatically with boundary
+      
+      // Debug: Print request details
+      print("Sending PDF to server:");
+      print("URL: $uri");
+      print("File path: ${pdfFile.path}");
+      print("File size: ${await pdfFile.length()} bytes");
+      print("Request fields: ${request.fields}");
+      print("Request files: ${request.files.map((f) => '${f.field}: ${f.filename}').toList()}");
       
       // Send the request
       final streamedResponse = await request.send();
