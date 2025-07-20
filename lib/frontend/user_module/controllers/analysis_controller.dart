@@ -237,19 +237,27 @@ class AnalysisController extends GetxController {
         final prefs = await SharedPreferences.getInstance();
         final userId = prefs.getString('userId');
         
-        await PdfService.sendPdfToServer(
+        final result = await PdfService.sendPdfToServer(
           pdfFile,
           userId: userId,
           totalIncome: totalIncome,
           totalExpenses: totalExpenses,
           netAmount: netAmount,
         );
+        
+        // Extract email and file path from response
+        final userEmail = result['email'] as String;
+        final filePath = result['filePath'] as String;
+        
         Get.snackbar(
           'Report Sent',
-          'Your financial report has been sent to the server successfully!',
+          'Your financial report has been sent to $userEmail successfully!',
           backgroundColor: Colors.blue,
           colorText: Colors.white,
         );
+        
+        print('Report sent to email: $userEmail');
+        print('File saved at: $filePath');
       } catch (e) {
         print('Error sending PDF to server: $e');
         Get.snackbar(

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
 
 import 'package:flutter/services.dart';
@@ -86,7 +87,7 @@ class PdfService {
   }
 
 
-  static Future<void> sendPdfToServer(
+  static Future<Map<String, dynamic>> sendPdfToServer(
     File pdfFile, {
     String? userId,
     double? totalIncome,
@@ -147,6 +148,21 @@ class PdfService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         print("PDF sent to server successfully");
         print("Response: ${response.body}");
+        
+        // Parse response to get email and file info
+        final responseData = json.decode(response.body);
+        final userEmail = responseData['user']['email'];
+        final filePath = responseData['file']['filePath'];
+        
+        print("User email from response: $userEmail");
+        print("File path from response: $filePath");
+        
+        return {
+          'success': true,
+          'email': userEmail,
+          'filePath': filePath,
+          'response': responseData
+        };
       } else {
         print("Failed to send PDF: ${response.statusCode}");
         print("Response: ${response.body}");
