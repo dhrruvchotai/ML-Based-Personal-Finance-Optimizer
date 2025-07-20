@@ -252,5 +252,4 @@ class SignUpSignInController extends GetxController {
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
-
 }

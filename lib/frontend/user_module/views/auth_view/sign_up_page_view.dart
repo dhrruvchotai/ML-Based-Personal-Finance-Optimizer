@@ -133,7 +133,7 @@ class SignUpPage extends StatelessWidget {
                       text: 'Already have an account? ',
                       linkText: 'Sign In',
                       onTap: () {
-                        Get.offNamed('/signin', arguments: null);
+                        Get.toNamed('/signin', arguments: null);
                       },
                     ),
                   ],
