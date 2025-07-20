@@ -112,16 +112,23 @@ class PdfService {
       // Add additional form data if provided
       if (userId != null) {
         request.fields['userId'] = userId;
+        print("Adding userId: $userId");
       }
       if (totalIncome != null) {
         request.fields['totalIncome'] = totalIncome.toString();
+        print("Adding totalIncome: $totalIncome");
       }
       if (totalExpenses != null) {
         request.fields['totalExpenses'] = totalExpenses.toString();
+        print("Adding totalExpenses: $totalExpenses");
       }
       if (netAmount != null) {
         request.fields['netAmount'] = netAmount.toString();
+        print("Adding netAmount: $netAmount");
       }
+      
+      // Add dummy field to ensure form data is recognized
+      request.fields['_appData'] = 'true';
       
       // Don't set Content-Type header - let the browser set it automatically with boundary
       
