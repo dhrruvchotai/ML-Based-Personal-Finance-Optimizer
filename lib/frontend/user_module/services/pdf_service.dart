@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -80,6 +82,64 @@ class PdfService {
       pdf: pdf
     );
   }
+
+
+  static Future<void> sendPdfToServer(
+    File pdfFile, {
+    String? userId,
+    double? totalIncome,
+    double? totalExpenses,
+    double? netAmount,
+  }) async {
+    try {
+      // You can replace this URL with your actual server endpoint
+      final uri = Uri.parse('localhost:5000/api/pdf/upload/');
+      
+      // Create multipart request
+      final request = http.MultipartRequest('POST', uri);
+      
+      // Add the PDF file to the request
+      request.files.add(await http.MultipartFile.fromPath(
+        'file', 
+        pdfFile.path,
+        filename: pdfFile.path.split('/').last,
+      ));
+      
+      // Add additional form data if provided
+      if (userId != null) {
+        request.fields['userId'] = userId;
+      }
+      if (totalIncome != null) {
+        request.fields['totalIncome'] = totalIncome.toString();
+      }
+      if (totalExpenses != null) {
+        request.fields['totalExpenses'] = totalExpenses.toString();
+      }
+      if (netAmount != null) {
+        request.fields['netAmount'] = netAmount.toString();
+      }
+      
+      // Add any additional headers if needed
+      request.headers['Content-Type'] = 'multipart/form-data';
+      
+      // Send the request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("PDF sent to server successfully");
+        print("Response: ${response.body}");
+      } else {
+        print("Failed to send PDF: ${response.statusCode}");
+        print("Response: ${response.body}");
+        throw Exception('Server returned status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Error sending PDF to server: $e");
+      throw Exception('Failed to send PDF to server: $e');
+    }
+  }
+
   
   // Build header section of the PDF
   static pw.Widget _buildHeader(String userName) {

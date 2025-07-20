@@ -171,7 +171,7 @@ class AnalysisController extends GetxController {
     }
   }
   
-  // Generate and download PDF report
+  // Generate PDF report, send to server, and open locally
   Future<void> generatePdfReport() async {
     try {
       isGeneratingPdf.value = true;
@@ -197,6 +197,7 @@ class AnalysisController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       final userData = prefs.getString('user_data');
       String userName = 'User';
+    
       
       if (userData != null) {
         try {
@@ -209,7 +210,7 @@ class AnalysisController extends GetxController {
         }
       }
       
-      // Generate PDF report
+      // Generate PDF report with financial data and chart images
       final pdfFile = await PdfService.generateFinancialReport(
         totalIncome: totalIncome,
         totalExpenses: totalExpenses,
@@ -220,6 +221,35 @@ class AnalysisController extends GetxController {
         expenseChartImage: expenseChartImage,
         incomeChartImage: incomeChartImage,
       );
+      
+      // Send PDF to server
+      try {
+        // Get user ID from SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final userId = prefs.getString('userId');
+        
+        await PdfService.sendPdfToServer(
+          pdfFile,
+          userId: userId,
+          totalIncome: totalIncome,
+          totalExpenses: totalExpenses,
+          netAmount: netAmount,
+        );
+        Get.snackbar(
+          'Report Sent',
+          'Your financial report has been sent to the server successfully!',
+          backgroundColor: Colors.blue,
+          colorText: Colors.white,
+        );
+      } catch (e) {
+        print('Error sending PDF to server: $e');
+        Get.snackbar(
+          'Warning',
+          'Report generated but failed to send to server: $e',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+      }
       
       // Open the generated PDF
       await PdfService.openPDF(pdfFile);

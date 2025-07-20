@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../controllers/analysis_controller.dart';
-import '../transactionPage.dart';
 
 class AnalysisPage extends StatelessWidget {
   final AnalysisController controller = Get.put(AnalysisController());
@@ -33,27 +32,28 @@ class AnalysisPage extends StatelessWidget {
         actions: [
           // PDF Download Button
           Obx(() => controller.isGeneratingPdf.value
-            ? Container(
-                margin: const EdgeInsets.only(right: 16),
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-                ),
-              )
-            : IconButton(
-                icon: Icon(
-                  Icons.download_rounded,
-                  color: theme.colorScheme.primary,
-                ),
-                tooltip: 'Download PDF Report',
-                onPressed: controller.generatePdfReport,
-              )
-          ),
+              ? Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.colorScheme.primary),
+                  ),
+                )
+              : IconButton(
+                  icon: Icon(
+                    Icons.download_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  tooltip: 'Download PDF Report',
+                  onPressed: () => controller.generatePdfReport(),
+                )),
         ],
       ),
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
+      backgroundColor:
+          isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF8FAFC),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -63,7 +63,8 @@ class AnalysisPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+                Icon(Icons.error_outline,
+                    size: 64, color: theme.colorScheme.error),
                 const SizedBox(height: 16),
                 Text(
                   'Error',
@@ -84,7 +85,8 @@ class AnalysisPage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text('Retry'),
                 ),
@@ -97,7 +99,6 @@ class AnalysisPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-
               _buildSummaryCards(context),
               const SizedBox(height: 32),
               // Download Report Button
@@ -109,16 +110,17 @@ class AnalysisPage extends StatelessWidget {
                       ? null
                       : controller.generatePdfReport,
                   icon: controller.isGeneratingPdf.value
-                    ? Container(
-                        width: 20,
-                        height: 20,
-                        margin: const EdgeInsets.only(right: 8),
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.download_rounded),
+                      ? Container(
+                          width: 20,
+                          height: 20,
+                          margin: const EdgeInsets.only(right: 8),
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.download_rounded),
                   label: Text(
                     controller.isGeneratingPdf.value
                         ? 'Generating PDF...'
@@ -259,7 +261,7 @@ class AnalysisPage extends StatelessWidget {
         'Net Amount',
         controller.netAmount,
         controller.netAmount >= 0
-            ?  Color(0xFF64B5F6)
+            ? Color(0xFF64B5F6)
             : Theme.of(context).colorScheme.tertiaryContainer,
         controller.netAmount >= 0 ? Icons.account_balance : Icons.warning,
         controller.netAmount >= 0
@@ -280,13 +282,13 @@ class AnalysisPage extends StatelessWidget {
   }
 
   Widget _buildSummaryCard(
-      BuildContext context,
-      String title,
-      double amount,
-      Color color,
-      IconData icon,
-      Color iconTextColor,
-      ) {
+    BuildContext context,
+    String title,
+    double amount,
+    Color color,
+    IconData icon,
+    Color iconTextColor,
+  ) {
     return Card(
       elevation: 1,
       margin: const EdgeInsets.symmetric(vertical: 2),
@@ -372,10 +374,10 @@ class AnalysisPage extends StatelessWidget {
   }
 
   Widget _buildPieChart(
-      BuildContext context,
-      Map<String, double> data,
-      String title,
-      ) {
+    BuildContext context,
+    Map<String, double> data,
+    String title,
+  ) {
     final theme = Theme.of(context);
     if (data.isEmpty) {
       return _buildEmptyChart(context, title);
@@ -421,7 +423,8 @@ class AnalysisPage extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 25),
             SizedBox(
@@ -465,25 +468,24 @@ class AnalysisPage extends StatelessWidget {
                 ],
                 annotations: <CircularChartAnnotation>[
                   CircularChartAnnotation(
-                    widget: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '\₹${total.toStringAsFixed(0)}',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
+                      widget: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '\₹${total.toStringAsFixed(0)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
                         ),
-                        Text(
-                          'Total',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.hintColor,
-                          ),
+                      ),
+                      Text(
+                        'Total',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.hintColor,
                         ),
-                      ],
-                    )
-                  )
+                      ),
+                    ],
+                  ))
                 ],
               ),
             ),
@@ -496,10 +498,10 @@ class AnalysisPage extends StatelessWidget {
   }
 
   Widget _buildDonutChart(
-      BuildContext context,
-      Map<String, double> data,
-      String title,
-      ) {
+    BuildContext context,
+    Map<String, double> data,
+    String title,
+  ) {
     final theme = Theme.of(context);
     if (data.isEmpty) {
       return _buildEmptyChart(context, title);
@@ -584,25 +586,24 @@ class AnalysisPage extends StatelessWidget {
                 ],
                 annotations: <CircularChartAnnotation>[
                   CircularChartAnnotation(
-                    widget: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '\₹${total.toStringAsFixed(0)}',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
+                      widget: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '\₹${total.toStringAsFixed(0)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
                         ),
-                        Text(
-                          'Total',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.hintColor,
-                          ),
+                      ),
+                      Text(
+                        'Total',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.hintColor,
                         ),
-                      ],
-                    )
-                  )
+                      ),
+                    ],
+                  ))
                 ],
               ),
             ),
@@ -614,8 +615,11 @@ class AnalysisPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDataTable(BuildContext context, List<MapEntry<String, double>> entries,
-      double total, List<Color> colors) {
+  Widget _buildDataTable(
+      BuildContext context,
+      List<MapEntry<String, double>> entries,
+      double total,
+      List<Color> colors) {
     final theme = Theme.of(context);
 
     return Column(
@@ -687,7 +691,8 @@ class AnalysisPage extends StatelessWidget {
           children: [
             Text(
               'Monthly Trends',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -699,8 +704,10 @@ class AnalysisPage extends StatelessWidget {
                   labelStyle: theme.textTheme.bodySmall,
                 ),
                 primaryYAxis: NumericAxis(
-                  numberFormat: NumberFormat.currency(symbol: '\₹', decimalDigits: 0),
-                  majorGridLines: const MajorGridLines(width: 0.5, dashArray: <double>[5, 5]),
+                  numberFormat:
+                      NumberFormat.currency(symbol: '\₹', decimalDigits: 0),
+                  majorGridLines: const MajorGridLines(
+                      width: 0.5, dashArray: <double>[5, 5]),
                   axisLine: const AxisLine(width: 0),
                   labelStyle: theme.textTheme.bodySmall,
                 ),
@@ -760,7 +767,8 @@ class AnalysisPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pie_chart_outline, size: 54, color: theme.hintColor.withOpacity(0.28)),
+          Icon(Icons.pie_chart_outline,
+              size: 54, color: theme.hintColor.withOpacity(0.28)),
           const SizedBox(height: 14),
           Text(
             'No Data Available',
