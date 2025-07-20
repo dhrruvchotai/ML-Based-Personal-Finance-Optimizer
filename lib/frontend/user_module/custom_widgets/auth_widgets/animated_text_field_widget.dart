@@ -43,7 +43,7 @@ class _AnimatedTextFieldState extends State<AnimatedTextField> {
         );
       },
       child: Container(
-        height: 58,
+        height: 70,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
@@ -90,10 +90,10 @@ class _AnimatedTextFieldState extends State<AnimatedTextField> {
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
-              vertical: 20,
+              vertical: 16,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
@@ -114,7 +114,7 @@ class _AnimatedTextFieldState extends State<AnimatedTextField> {
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.error,
-                width: 2,
+                width: 1,
               ),
             ),
             focusedErrorBorder: OutlineInputBorder(

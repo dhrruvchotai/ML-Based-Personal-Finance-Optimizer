@@ -30,7 +30,6 @@ class GoalsPage extends StatelessWidget {
           ),
         ),
         elevation: 0,
-        centerTitle: true,
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
       ),
