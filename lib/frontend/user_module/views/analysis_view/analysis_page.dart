@@ -676,7 +676,6 @@ class AnalysisPage extends StatelessWidget {
   Widget _buildMonthlyTrendsChart(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Sample monthly data - In a real app, you would get this from your controller
     final List<MonthlyData> monthlyData = [
       MonthlyData('Jan', 1200, 900),
       MonthlyData('Feb', 1300, 1000),

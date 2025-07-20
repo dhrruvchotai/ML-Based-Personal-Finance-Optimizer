@@ -170,24 +170,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF6B7280), size: 18),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Get.back(),
                 padding: EdgeInsets.zero,
               ),
             ),
-            actions: [
-              Container(
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.more_vert, color: Color(0xFF6B7280), size: 18),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-            ],
           ),
         ),
       ),

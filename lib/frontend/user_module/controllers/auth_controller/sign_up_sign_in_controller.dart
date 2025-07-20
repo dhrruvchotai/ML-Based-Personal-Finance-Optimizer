@@ -32,11 +32,8 @@ class SignUpSignInController extends GetxController {
     if (emailController.text == 'admin@gmail.com' && value == 'admin@123') {
       return null;
     }
-    if (value.length < 8) {
-      return 'Password must be at least 8 characters long';
-    }
-    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-      return 'Password must contain uppercase, lowercase, and number';
+    if (value.length <= 5) {
+      return 'Password must be at least 6 characters long';
     }
     return null;
   }

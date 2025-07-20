@@ -25,7 +25,9 @@ class AddGoalPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
-        ),
+        ),leading: IconButton(onPressed: () {
+          Get.back();
+        }, icon: Icon(Icons.arrow_back_ios_rounded)),
         elevation: 0,
         centerTitle: false,
         backgroundColor: theme.colorScheme.primary,
@@ -158,8 +160,10 @@ class AddGoalPage extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
+
                       'CREATE GOAL',
                       style: TextStyle(
+                        color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
