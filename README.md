@@ -1,43 +1,83 @@
-# ML-Based Personal Finance Optimizer
+# ML Financial App  
 
-A comprehensive personal finance management application built with Flutter and Node.js backend.
+A comprehensive financial management application with machine learning capabilities for **bill scanning, spending analysis, and transaction predictions**.  
 
-## Features
+---
 
-### 📊 Financial Analysis Dashboard
-- **Pie Charts**: Visualize expense and income categories with interactive pie charts
-- **Line Charts**: Track expenses and income over time with detailed line charts
-- **Time Filters**: Filter data by different time periods (1 week, 1 month, 3 months, 6 months, 1 year, all time)
-- **Summary Cards**: Quick overview of total income, expenses, and net amount
-- **Real-time Updates**: Charts update automatically when filters are applied
+## 🚀 Overview  
 
-### 💰 Transaction Management
-- Add, view, and delete transactions
-- Categorize transactions (expenses and income)
-- Filter transactions by date range and type
-- Modern UI with smooth animations
+This application provides users with **intelligent financial management tools** powered by machine learning.  
+- Track transactions  
+- Scan bills automatically  
+- Analyse spending patterns  
+- Receive AI-powered financial insights  
 
-### 🔐 Authentication
-- Email/password authentication
-- Google Sign-In integration
-- Secure user sessions
+---
 
-### 🤖 AI Chatbot
-- Financial advice and insights
-- Transaction analysis
-- Budget recommendations
+## ✨ Key Capabilities  
 
-## Getting Started
+- 📷 **Smart Bill Scanning** – Image-powered bill recognition and data extraction  
+- 📊 **Intelligent Analytics** – Spending analysis and pattern recognition  
+- 🔮 **Predictive Insights** – Financial forecasting and spending predictions  
+- 🔐 **Secure Authentication** – Firebase-powered user management with Google Sign-In  
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🛠 Technology Stack  
 
-A few resources to get you started if this is your first Flutter project:
+| Component       | Technology  | Version |
+|-----------------|-------------|---------|
+| **Frontend**    | Flutter     | Latest  |
+| **Backend**     | Node.js     | Latest  |
+| **Machine Learning** | Python | 3.x     |
+| **Database**    | MongoDB     | Latest  |
+| **Authentication** | Firebase Auth | Latest |
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📌 Features  
+
+### 🔑 Authentication Module  
+- Secure account creation with email validation  
+- One-click **Google Sign-In**  
+
+### 💰 Transaction Management Module  
+- Real-time transaction tracking & categorization  
+- Comprehensive history with search & filter  
+- Interactive charts & graphs  
+
+### 🤖 ML Services Module  
+- **Bill Scanning** – Automatic recognition  
+- **Data Extraction** – Amounts, dates, merchants  
+- **Spending Analysis** – ML-powered insights  
+- **Prediction Engine** – Forecasts & budget recommendations  
+
+### 👤 User Profile Module  
+- Profile customization & settings  
+- Data export in multiple formats  
+- Notifications for transactions
+
+## 🖥️ Screenshot
+
+<table>
+  <tr>
+    <td><img src="image1.png" width="200" style="border:1px solid black"/></td>
+    <td><img src="image2.png" width="200" style="border:1px solid black"/></td>
+  </tr>
+  <tr>
+    <td><img src="image3.png" width="200" style="border:1px solid black"/></td>
+    <td><img src="image4.png" width="200" style="border:1px solid black"/></td>
+  </tr>
+   <tr>
+    <td><img src="image3.png" width="200" style="border:1px solid black"/></td>
+    <td><img src="image4.png" width="200" style="border:1px solid black"/></td>
+  </tr>
+   <tr>
+    <td><img src="image3.png" width="200" style="border:1px solid black"/></td>
+    <td><img src="image4.png" width="200" style="border:1px solid black"/></td>
+  </tr>
+   <tr>
+    <td><img src="image3.png" width="200" style="border:1px solid black"/></td>
+    <td><img src="image4.png" width="200" style="border:1px solid black"/></td>
+  </tr>
+</table>
