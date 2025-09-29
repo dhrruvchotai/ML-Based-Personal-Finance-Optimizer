@@ -410,10 +410,6 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
       widget.controller.addTransaction(transaction);
       
-      if (_isRecurring.value) {
-        // Schedule notification for recurring transaction
-        _scheduleRecurringTransactionNotification(transaction);
-      }
       
       Navigator.pop(context);
 
@@ -425,53 +421,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       );
     }
   }
-  
-  void _scheduleRecurringTransactionNotification(TransactionModel transaction) async {
-    if (transaction.isRecurring && transaction.recurringDuration != null) {
-      try {
-        // Handle special case for 1-minute test duration
-        int durationInDays = transaction.recurringDuration!;
-        
-        // If duration is 1, it's our 1-minute test option
-        if (durationInDays == 1) {
-          // Schedule notification for 1 minute from now
-          bool success = await NotificationService.scheduleRecurringTransaction(
-            transaction: transaction,
-            durationInDays: durationInDays,
-            isTestMode: true, // Pass flag to indicate test mode (1 minute)
-          );
-          
-          if (success) {
-            print('Test notification scheduled for 1 minute');
-            Get.snackbar(
-              'Test Notification',
-              'A test notification has been scheduled for 1 minute from now.',
-              backgroundColor: Colors.blue,
-              colorText: Colors.white,
-              duration: const Duration(seconds: 3),
-            );
-          } else {
-            print('Failed to schedule test notification');
-          }
-        } else {
-          // Normal duration in days
-          bool success = await NotificationService.scheduleRecurringTransaction(
-            transaction: transaction,
-            durationInDays: durationInDays,
-            isTestMode: false,
-          );
-          
-          if (success) {
-            print('Recurring transaction notification scheduled successfully for ${transaction.recurringDuration} days');
-          } else {
-            print('Failed to schedule recurring transaction notification');
-          }
-        }
-      } catch (e) {
-        print('Error scheduling recurring transaction notification: $e');
-      }
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
