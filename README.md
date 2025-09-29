@@ -58,26 +58,23 @@ This application provides users with **intelligent financial management tools** 
 - Notifications for transactions
 
 ## 🖥️ Screenshot
+<div align="center">
+  <table>
+    <tr>
+      <td><img src="readme/Picture2.jpg" width="200" style="border:1px solid black"/></td>
+      <td><img src="readme/Picture3.jpg" width="200" style="border:1px solid black"/></td>
+      <td><img src="readme/Picture4.jpg" width="200" style="border:1px solid black"/></td>
+    </tr>
+    <tr>
+      <td><img src="readme/Picture5.jpg" width="200" style="border:1px solid black"/></td>
+      <td><img src="readme/Picture6.jpg" width="200" style="border:1px solid black"/></td>
+      <td><img src="readme/Picture7.jpg" width="200" style="border:1px solid black"/></td>
+    </tr>
+    <tr>
+      <td><img src="readme/Picture8.jpg" width="200" style="border:1px solid black"/></td>
+      <td><img src="readme/Picture9.jpg" width="200" style="border:1px solid black"/></td>
+      <td><img src="readme/Picture10.jpg" width="200" style="border:1px solid black"/></td>
+    </tr>
+  </table>
+</div>
 
-<table>
-  <tr>
-    <td><img src="readme/Picture1.jpg" width="200" style="border:1px solid black"/></td>
-    <td><img src="readme/Picture2.jpg" width="200" style="border:1px solid black"/></td>
-  </tr>
-  <tr>
-    <td><img src="readme/Picture3.jpg" width="200" style="border:1px solid black"/></td>
-    <td><img src="readme/Picture4.jpg" width="200" style="border:1px solid black"/></td>
-  </tr>
-   <tr>
-    <td><img src="readme/Picture5.jpg" width="200" style="border:1px solid black"/></td>
-    <td><img src="readme/Picture6.jpg" width="200" style="border:1px solid black"/></td>
-  </tr>
-   <tr>
-    <td><img src="readme/Picture7.jpg" width="200" style="border:1px solid black"/></td>
-    <td><img src="readme/Picture8.jpg" width="200" style="border:1px solid black"/></td>
-  </tr>
-   <tr>
-    <td><img src="readme/Picture9.jpg" width="200" style="border:1px solid black"/></td>
-    <td><img src="readme/Picture10.jpg" width="200" style="border:1px solid black"/></td>
-  </tr>
-</table>
