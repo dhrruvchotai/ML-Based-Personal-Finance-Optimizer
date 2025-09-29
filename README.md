@@ -1,4 +1,4 @@
-# ML Financial App  
+# ML-Based-Personal-Finance-Optimizer
 
 A comprehensive financial management application with machine learning capabilities for **bill scanning, spending analysis, and transaction predictions**.  
 
