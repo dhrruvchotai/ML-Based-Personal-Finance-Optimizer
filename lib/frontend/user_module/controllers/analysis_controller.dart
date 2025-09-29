@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -33,7 +34,7 @@ class AnalysisController extends GetxController {
   final GlobalKey expenseChartKey = GlobalKey();
   final GlobalKey incomeChartKey = GlobalKey();
   final GlobalKey monthlyTrendsChartKey = GlobalKey(); // Add key for monthly trends chart
-  
+
   @override
   void onInit() {
     super.onInit();
@@ -151,42 +152,42 @@ class AnalysisController extends GetxController {
     if (filteredTransactions.isEmpty) {
       return [];
     }
-    
+
     // Group transactions by year-month
     final Map<String, Map<String, double>> monthlyData = {};
-    
+
     for (var transaction in filteredTransactions) {
       final year = transaction.transactionDate.year;
       final month = transaction.transactionDate.month;
       final String monthKey = '$year-${month.toString().padLeft(2, '0')}';
-      
+
       if (!monthlyData.containsKey(monthKey)) {
         monthlyData[monthKey] = {'income': 0.0, 'expense': 0.0};
       }
-      
+
       if (transaction.isExpense) {
         monthlyData[monthKey]!['expense'] = (monthlyData[monthKey]!['expense'] ?? 0) + transaction.amount;
       } else {
         monthlyData[monthKey]!['income'] = (monthlyData[monthKey]!['income'] ?? 0) + transaction.amount;
       }
     }
-    
+
     // Sort months chronologically
     final sortedKeys = monthlyData.keys.toList()..sort();
-    
+
     // Take only the last 6 months or all if less than 6
-    final displayKeys = sortedKeys.length > 6 
-        ? sortedKeys.sublist(sortedKeys.length - 6) 
+    final displayKeys = sortedKeys.length > 6
+        ? sortedKeys.sublist(sortedKeys.length - 6)
         : sortedKeys;
-    
+
     // Convert to list of MonthlyTrendsData
     return displayKeys.map((key) {
       final parts = key.split('-');
       final year = int.parse(parts[0]);
       final month = int.parse(parts[1]);
-      
+
       final monthName = DateFormat('MMM').format(DateTime(year, month));
-      
+
       return MonthlyTrendsData(
         monthName,
         monthlyData[key]!['income']!,
@@ -195,7 +196,7 @@ class AnalysisController extends GetxController {
       );
     }).toList();
   }
-  
+
   // Get total expenses
   double get totalExpenses {
     return filteredTransactions
@@ -246,7 +247,7 @@ class AnalysisController extends GetxController {
       Uint8List? expenseChartImage;
       Uint8List? incomeChartImage;
       Uint8List? monthlyTrendsImage;
-      
+
       try {
         expenseChartImage = await captureWidget(expenseChartKey);
         incomeChartImage = await captureWidget(incomeChartKey);
@@ -300,19 +301,32 @@ class AnalysisController extends GetxController {
           netAmount: netAmount,
         );
         
-        // Extract email and file path from response
+        // Extract email, file path and download URL from response
         final userEmail = result['email'] as String;
         final filePath = result['filePath'] as String;
-        
+        final downloadUrl = result['downloadUrl'] as String;
+
         Get.snackbar(
           'Report Sent',
           'Your financial report has been sent to $userEmail successfully!',
           backgroundColor: Colors.blue,
           colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+          mainButton: TextButton(
+            onPressed: () {
+              // Open download URL in browser
+              launchDownloadUrl(downloadUrl);
+            },
+            child: const Text(
+              'DOWNLOAD',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
         );
         
         print('Report sent to email: $userEmail');
         print('File saved at: $filePath');
+        print('Download URL: $downloadUrl');
       } catch (e) {
         print('Error sending PDF to server: $e');
         Get.snackbar(
@@ -370,7 +384,34 @@ class AnalysisController extends GetxController {
   void refreshMarketData() {
     fetchMarketData();
   }
-} 
+
+  // Launch URL to download PDF
+  Future<void> launchDownloadUrl(String url) async {
+    try {
+      final Uri uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        print('Download URL launched: $url');
+      } else {
+        print('Could not launch URL: $url');
+        Get.snackbar(
+          'Error',
+          'Could not open download link',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to open download link: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+}
 
 // Class to hold monthly trends data
 class MonthlyTrendsData {
@@ -378,6 +419,6 @@ class MonthlyTrendsData {
   final double income;
   final double expense;
   final DateTime date; // Store actual date for sorting
-  
+
   MonthlyTrendsData(this.month, this.income, this.expense, this.date);
-} 
+}
