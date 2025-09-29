@@ -173,7 +173,7 @@ class NotificationService {
           ),
         ],
         schedule: isTestMode 
-            ? NotificationInterval(interval: 5, timeZone: await AwesomeNotifications().getLocalTimeZoneIdentifier())
+            ? NotificationInterval(interval: Duration(seconds: 5), timeZone: await AwesomeNotifications().getLocalTimeZoneIdentifier())
             : NotificationCalendar.fromDate(date: scheduledDate),
       );
 

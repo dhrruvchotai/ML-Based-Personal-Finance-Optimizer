@@ -33,6 +33,7 @@ class MyApp extends StatelessWidget {
     final themeController = Get.put(ThemeController());
     Get.put(TransactionController());
     return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: lightMode,
       darkTheme: darkMode,
